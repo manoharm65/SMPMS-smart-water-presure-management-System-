@@ -1,0 +1,18 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "P-01",
+      "properties": { "pipelineId": "P-01", "zoneId": "DMA-01" },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [75.9040, 17.6620],
+          [75.9100, 17.6620],
+          [75.9160, 17.6620]
+        ]
+      }
+    }
+  ]
+}

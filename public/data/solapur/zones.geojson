@@ -1,0 +1,22 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "DMA-01",
+      "properties": { "zoneId": "DMA-01", "name": "Solapur (Sample) - DMA 01" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [75.9000, 17.6700],
+            [75.9200, 17.6700],
+            [75.9200, 17.6550],
+            [75.9000, 17.6550],
+            [75.9000, 17.6700]
+          ]
+        ]
+      }
+    }
+  ]
+}

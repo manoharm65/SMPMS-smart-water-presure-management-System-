@@ -1,0 +1,14 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "V-001",
+      "properties": { "valveId": "V-001", "name": "Valve V-001", "zoneId": "DMA-01" },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [75.9100, 17.6620]
+      }
+    }
+  ]
+}
