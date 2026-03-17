@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #080d14;
+  color: rgba(255, 255, 255, 0.86);
+  font-family: 'IBM Plex Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle “water/SCADA ambience” using existing palette (accent/info) */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 500px at 18% 22%, rgba(0, 200, 150, 0.10), transparent 60%),
+    radial-gradient(700px 450px at 78% 72%, rgba(74, 159, 245, 0.10), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%);
+  opacity: 0.9;
+}
+
+/* Subtle SCADA-style scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 200, 150, 0.35) rgba(255, 255, 255, 0.05);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(0, 200, 150, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 200, 150, 0.35);
+}
+
+/* Reduce default focus noise; rely on ring utilities. */
+*:focus {
+  outline: none;
+}
+
+/* Leaflet container needs explicit height. */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: #080d14;
+}
+
+/* Leaflet tooltip/popup theming to match SCADA panels */
+.leaflet-tooltip {
+  background: rgba(11, 19, 32, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.86);
+  box-shadow:
+    0 0 0 1px rgba(0, 200, 150, 0.12),
+    0 10px 20px rgba(0, 0, 0, 0.35);
+}
+
+.leaflet-tooltip-left:before {
+  border-left-color: rgba(255, 255, 255, 0.10);
+}
+
+.leaflet-tooltip-right:before {
+  border-right-color: rgba(255, 255, 255, 0.10);
+}
+
+.leaflet-tooltip-top:before {
+  border-top-color: rgba(255, 255, 255, 0.10);
+}
+
+.leaflet-tooltip-bottom:before {
+  border-bottom-color: rgba(255, 255, 255, 0.10);
+}
+
+/* Animated leak indicator (used via Leaflet DivIcon). */
+.leak-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: #f04d4d;
+  box-shadow: 0 0 0 1px rgba(240, 77, 77, 0.35);
+  position: relative;
+}
+
+.leak-indicator {
+  animation: leakFlicker 2.2s ease-in-out infinite;
+}
+
+.leak-indicator::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 9999px;
+  border: 1px solid rgba(240, 77, 77, 0.6);
+  animation: leakPulse 1.4s ease-out infinite;
+}
+
+@keyframes leakPulse {
+  0% {
+    transform: scale(0.25);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes leakFlicker {
+  0% {
+    filter: saturate(1);
+  }
+  50% {
+    filter: saturate(1.35);
+  }
+  100% {
+    filter: saturate(1);
+  }
+}
