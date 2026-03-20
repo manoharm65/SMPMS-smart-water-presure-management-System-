@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   Chart,
   BarController,
@@ -12,6 +12,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js'
+import { getZones, getKPI, usePolling, type Zone, type KPI } from '../services/api'
 
 Chart.register(
   BarController,
@@ -26,28 +27,12 @@ Chart.register(
   Legend
 )
 
-const ZONES = ['DMA-01', 'DMA-02', 'DMA-03', 'DMA-04', 'DMA-05', 'DMA-06', 'DMA-07', 'DMA-08']
-
-const ZONE_STATUS: Record<string, string> = {
-  'DMA-01': 'ok',
-  'DMA-02': 'low',
-  'DMA-03': 'ok',
-  'DMA-04': 'warn',
-  'DMA-05': 'crit',
-  'DMA-06': 'ok',
-  'DMA-07': 'ok',
-  'DMA-08': 'crit',
-}
-
 const STATUS_COLORS: Record<string, string> = {
   ok:   '#007A3D',
   warn: '#CC5500',
   low:  '#004DB3',
   crit: '#E8001D',
 }
-
-const PRESSURE_DATA = [3.2, 4.8, 2.9, 4.5, 6.2, 3.5, 3.1, 1.4]
-const VALVE_DATA = [42, 65, 38, 71, 18, 55, 45, 82]
 
 const HEATMAP_DATA: number[][] = [
   [3.2, 3.4, 3.1, 2.9, 3.0, 3.3, 3.5, 3.2],
@@ -80,24 +65,65 @@ export default function Analytics() {
   const barChartRef = useRef<Chart | null>(null)
   const scatterChartRef = useRef<Chart | null>(null)
 
+  const [zones, setZones] = useState<Zone[]>([])
+  const [kpi, setKpi] = useState<KPI | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Derive zone names from live data
+  const zoneNames = zones.map(z => z.name)
+
+  // Derive pressure data from zones
+  const pressureData = zones.map(z => z.pressure)
+
+  // Derive zone status colors
+  const zoneColors = zones.map(z => STATUS_COLORS[z.status] || STATUS_COLORS.ok)
+
+  // Count critical zones
+  const criticalZones = zones.filter(z => z.status === 'crit').length
+
+  // Calculate 24h uptime
+  const uptime = kpi ? ((kpi.zones_online / kpi.zones_total) * 100).toFixed(1) + '%' : '—'
+
+  const fetchData = useCallback(async () => {
+    try {
+      setError(null)
+      const [zonesData, kpiData] = await Promise.all([
+        getZones(),
+        getKPI(),
+      ])
+      setZones(zonesData)
+      setKpi(kpiData)
+      setLoading(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch data')
+      setLoading(false)
+    }
+  }, [])
+
+  // Initial fetch and polling every 30s
   useEffect(() => {
-    if (!barRef.current) return
+    fetchData()
+  }, [fetchData])
+
+  usePolling(fetchData, 30000, !loading)
+
+  useEffect(() => {
+    if (!barRef.current || zones.length === 0) return
     if (barChartRef.current) barChartRef.current.destroy()
 
     const ctx = barRef.current.getContext('2d')
     if (!ctx) return
 
-    const colors = ZONES.map(z => STATUS_COLORS[ZONE_STATUS[z]])
-
     barChartRef.current = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: ZONES,
+        labels: zoneNames,
         datasets: [{
           label: 'Pressure (bar)',
-          data: PRESSURE_DATA,
-          backgroundColor: colors.map(c => c + '33'),
-          borderColor: colors,
+          data: pressureData,
+          backgroundColor: zoneColors.map(c => c + '33'),
+          borderColor: zoneColors,
           borderWidth: 2,
         }]
       },
@@ -126,25 +152,23 @@ export default function Analytics() {
         }
       }
     })
-  }, [])
+  }, [zones, zoneNames, pressureData, zoneColors])
 
   useEffect(() => {
-    if (!scatterRef.current) return
+    if (!scatterRef.current || zones.length === 0) return
     if (scatterChartRef.current) scatterChartRef.current.destroy()
 
     const ctx = scatterRef.current.getContext('2d')
     if (!ctx) return
-
-    const scatterColors = ZONES.map(z => STATUS_COLORS[ZONE_STATUS[z]])
 
     scatterChartRef.current = new Chart(ctx, {
       type: 'scatter',
       data: {
         datasets: [{
           label: 'Zone',
-          data: ZONES.map((_, i) => ({ x: VALVE_DATA[i], y: PRESSURE_DATA[i] })),
-          backgroundColor: scatterColors.map(c => c + '33'),
-          borderColor: scatterColors,
+          data: zones.map(z => ({ x: z.valve_position, y: z.pressure })),
+          backgroundColor: zoneColors.map(c => c + '33'),
+          borderColor: zoneColors,
           borderWidth: 2,
           pointStyle: 'rect',
           pointRadius: 16,
@@ -161,8 +185,8 @@ export default function Analytics() {
             bodyFont: { family: 'Space Mono' },
             callbacks: {
               label: (ctx) => {
-                const idx = ctx.dataIndex
-                return `${ZONES[idx]} — Valve: ${VALVE_DATA[idx]}%, Pressure: ${PRESSURE_DATA[idx]} bar`
+                const zone = zones[ctx.dataIndex]
+                return `${zone?.name || 'Zone'} — Valve: ${zone?.valve_position}%, Pressure: ${zone?.pressure} bar`
               }
             }
           }
@@ -185,7 +209,7 @@ export default function Analytics() {
         }
       }
     })
-  }, [])
+  }, [zones, zoneColors])
 
   return (
     <div className="min-h-screen bg-paper text-ink font-condensed">
@@ -203,17 +227,17 @@ export default function Analytics() {
       {/* KPI Strip */}
       <div className="grid grid-cols-5 border-b-2 border-rule">
         {[
-          { label: 'AVG PRESSURE',  value: '3.49 BAR' },
-          { label: 'CRITICAL ZONES', value: '2' },
-          { label: 'SUSPECTED LEAKS', value: '1' },
-          { label: 'VALVE OVERRIDES',value: '3' },
-          { label: '24H UPTIME',     value: '98.2%' },
-        ].map((kpi, i) => (
+          { label: 'AVG PRESSURE',  value: kpi ? `${kpi.avg_pressure.toFixed(2)} BAR` : '—' },
+          { label: 'CRITICAL ZONES', value: loading ? '—' : String(criticalZones) },
+          { label: 'SUSPECTED LEAKS', value: kpi ? String(kpi.leaks_flagged) : '—' },
+          { label: 'VALVE OVERRIDES',value: kpi ? String(kpi.valve_ops) : '—' },
+          { label: '24H UPTIME',     value: loading ? '—' : uptime },
+        ].map((kpiItem, i) => (
           <div key={i} className="px-6 py-5 border-r-2 border-rule last:border-r-0">
             <span className="font-condensed text-xs text-dim uppercase tracking-wider block mb-1">
-              {kpi.label}
+              {kpiItem.label}
             </span>
-            <span className="font-mono text-xl font-bold text-ink">{kpi.value}</span>
+            <span className="font-mono text-xl font-bold text-ink">{kpiItem.value}</span>
           </div>
         ))}
       </div>
@@ -223,16 +247,32 @@ export default function Analytics() {
         {/* Bar Chart */}
         <div className="col-span-7 p-6 border-r-2 border-rule">
           <h2 className="font-syne font-bold text-lg text-ink mb-4">PRESSURE BY ZONE</h2>
-          <div className="h-64">
-            <canvas ref={barRef} />
+          <div className="h-64 flex items-center justify-center">
+            {loading ? (
+              <span className="font-mono text-sm text-dim">Loading...</span>
+            ) : error ? (
+              <span className="font-mono text-sm text-signal">Error: {error}</span>
+            ) : zones.length === 0 ? (
+              <span className="font-mono text-sm text-dim">No zone data</span>
+            ) : (
+              <canvas ref={barRef} />
+            )}
           </div>
         </div>
 
         {/* Scatter Chart */}
         <div className="col-span-5 p-6">
           <h2 className="font-syne font-bold text-lg text-ink mb-4">VALVE vs PRESSURE</h2>
-          <div className="h-64">
-            <canvas ref={scatterRef} />
+          <div className="h-64 flex items-center justify-center">
+            {loading ? (
+              <span className="font-mono text-sm text-dim">Loading...</span>
+            ) : error ? (
+              <span className="font-mono text-sm text-signal">Error: {error}</span>
+            ) : zones.length === 0 ? (
+              <span className="font-mono text-sm text-dim">No zone data</span>
+            ) : (
+              <canvas ref={scatterRef} />
+            )}
           </div>
         </div>
       </div>
@@ -256,7 +296,7 @@ export default function Analytics() {
             {HEATMAP_DATA.map((row, rowIdx) => (
               <div key={rowIdx} className="flex mb-1">
                 <div className="w-16 flex-shrink-0 font-mono text-xs text-dim flex items-center">
-                  {ZONES[rowIdx]}
+                  {zoneNames[rowIdx] || `Zone ${rowIdx + 1}`}
                 </div>
                 {row.map((value, colIdx) => (
                   <div

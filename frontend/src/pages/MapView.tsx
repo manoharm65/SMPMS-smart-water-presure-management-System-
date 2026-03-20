@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet'
+import { Link } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { loadAllKMLData, SpatialIndex, getPipesInBounds, type PipeData, type ValveData, type ValveCluster } from '../data/kmlParser'
+import { getZones, getKPI, getAlerts, usePolling, type Zone, type KPI, type Alert } from '../services/api'
 
 // Fix default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -22,37 +24,10 @@ const STATUS_COLORS: Record<string, string> = {
   crit: '#E8001D',
 }
 
-const ZONE_DATA: Record<string, { pressure: string, valve: string, ai: string, time: string }> = {
-  'DMA-01': { pressure: '3.20 bar', valve: '42%', ai: '94%', time: '14:32:01' },
-  'DMA-02': { pressure: '4.80 bar', valve: '65%', ai: '88%', time: '14:31:45' },
-  'DMA-03': { pressure: '2.90 bar', valve: '38%', ai: '91%', time: '14:32:12' },
-  'DMA-04': { pressure: '4.50 bar', valve: '71%', ai: '85%', time: '14:31:58' },
-  'DMA-05': { pressure: '6.20 bar', valve: '18%', ai: '99%', time: '14:28:41' },
-  'DMA-06': { pressure: '3.50 bar', valve: '55%', ai: '93%', time: '14:32:08' },
-  'DMA-07': { pressure: '3.10 bar', valve: '45%', ai: '96%', time: '14:32:20' },
-  'DMA-08': { pressure: '1.40 bar', valve: '82%', ai: '91%', time: '14:15:03' },
-}
-
-const ACTIVE_ALERTS = [
-  { zone: 'DMA-05 Central',  sev: 'crit', msg: 'Overpressure — 6.20 bar' },
-  { zone: 'DMA-08 Tail-end', sev: 'crit', msg: 'Pressure drop anomaly' },
-  { zone: 'DMA-02 South',    sev: 'warn', msg: 'Elevated reading — 4.80 bar' },
-]
-
-const ZONES = [
-  { id: 'DMA-01', name: 'North',      lat: 13.05, lng: 77.59, status: 'ok'   },
-  { id: 'DMA-02', name: 'South',      lat: 12.91, lng: 77.62, status: 'warn' },
-  { id: 'DMA-03', name: 'East',       lat: 12.93, lng: 77.72, status: 'low'  },
-  { id: 'DMA-04', name: 'West',       lat: 12.97, lng: 77.52, status: 'ok'   },
-  { id: 'DMA-05', name: 'Central',    lat: 12.98, lng: 77.59, status: 'crit' },
-  { id: 'DMA-06', name: 'Elevated',   lat: 12.88, lng: 77.58, status: 'ok'  },
-  { id: 'DMA-07', name: 'Industrial', lat: 12.95, lng: 77.50, status: 'ok'   },
-  { id: 'DMA-08', name: 'Tail-end',   lat: 12.85, lng: 77.65, status: 'crit' },
-]
-
-function createValveIcon(status: string, isSelected: boolean) {
+function createValveIcon(status: string, isSelected: boolean, aiConfidence?: number) {
   const color = STATUS_COLORS[status]
   const size = isSelected ? 28 : 24
+  const showLeakPulse = status === 'crit' && aiConfidence !== undefined && aiConfidence > 85
   return L.divIcon({
     className: 'custom-valve-marker',
     html: `
@@ -68,7 +43,7 @@ function createValveIcon(status: string, isSelected: boolean) {
         justify-content: center;
         cursor: pointer;
       ">
-        ${status === 'crit' ? `
+        ${showLeakPulse ? `
           <div style="
             width: 8px;
             height: 8px;
@@ -136,8 +111,8 @@ function MapStateTracker({
   return null
 }
 
-function ZoneMarker({ zone, selected, onSelect }: { zone: typeof ZONES[0], selected: boolean, onSelect: (id: string) => void }) {
-  const icon = createValveIcon(zone.status, selected)
+function ZoneMarker({ zone, selected, onSelect }: { zone: Zone, selected: boolean, onSelect: (id: string) => void }) {
+  const icon = createValveIcon(zone.status, selected, zone.ai_confidence)
   return (
     <Marker
       position={[zone.lat, zone.lng]}
@@ -148,7 +123,7 @@ function ZoneMarker({ zone, selected, onSelect }: { zone: typeof ZONES[0], selec
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", minWidth: 140 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{zone.id} — {zone.name}</div>
           <div style={{ fontSize: 11, color: '#6B6B6B', marginBottom: 6 }}>
-            Pressure: <strong style={{ color: STATUS_COLORS[zone.status] }}>{ZONE_DATA[zone.id].pressure}</strong>
+            Pressure: <strong style={{ color: STATUS_COLORS[zone.status] }}>{zone.pressure.toFixed(2)} bar</strong>
           </div>
           <button
             onClick={() => onSelect(zone.id)}
@@ -204,15 +179,70 @@ export default function MapView() {
   const [showZones, setShowZones] = useState(true)
   const [showPipes, setShowPipes] = useState(true)
   const [showValves, setShowValves] = useState(true)
-  const [visibleZoneIds, setVisibleZoneIds] = useState<string[]>(ZONES.map(z => z.id))
+  const [zones, setZones] = useState<Zone[]>([])
+  const [kpi, setKpi] = useState<KPI | null>(null)
+  const [alerts, setAlerts] = useState<Alert[]>([])
+  const [visibleZoneIds, setVisibleZoneIds] = useState<string[]>([])
   const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null)
   const [mapZoom, setMapZoom] = useState(12)
   const [spatialIndex, setSpatialIndex] = useState<SpatialIndex | null>(null)
   const [allPipes, setAllPipes] = useState<PipeData[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingApi, setLoadingApi] = useState(true)
   const [stats, setStats] = useState({ visibleValves: 0, visiblePipes: 0, clusters: 0 })
 
-  const selectedZone = selected ? ZONES.find(z => z.id === selected) : null
+  // Fetch live data from API
+  const fetchApiData = useCallback(async () => {
+    try {
+      const [zonesData, kpiData, alertsData] = await Promise.all([
+        getZones(),
+        getKPI(),
+        getAlerts(),
+      ])
+      setZones(zonesData)
+      setKpi(kpiData)
+      setAlerts(alertsData)
+      setLoadingApi(false)
+    } catch (err) {
+      console.warn('Failed to fetch API data', err)
+      setLoadingApi(false)
+    }
+  }, [])
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchApiData()
+  }, [fetchApiData])
+
+  // Poll every 30 seconds
+  usePolling(fetchApiData, 30000)
+
+  // Visible zone IDs from live zones
+  const visibleZoneIdsFromZones = useMemo(() => {
+    if (!mapBounds) return zones.map(z => z.id)
+    return zones.filter(z => mapBounds.contains([z.lat, z.lng])).map(z => z.id)
+  }, [zones, mapBounds])
+
+  // Derive visible zone set
+  const visibleZoneSet = useMemo(() => new Set(visibleZoneIds), [visibleZoneIds])
+
+  // Selected zone from live data
+  const selectedZone = selected ? zones.find(z => z.id === selected) : null
+
+  // Compute worst status for pipe coloring (from visible zones)
+  const worstStatus = useMemo(() => {
+    if (zones.length === 0) return 'ok'
+    const priority: Record<string, number> = { crit: 4, warn: 3, low: 2, ok: 1 }
+    let worst = 'ok'
+    for (const zone of zones) {
+      if ((priority[zone.status] || 0) > (priority[worst] || 0)) {
+        worst = zone.status
+      }
+    }
+    return worst
+  }, [zones])
+
+  const pipeColor = STATUS_COLORS[worstStatus]
 
   // Build spatial index once when KML data loads
   useEffect(() => {
@@ -231,8 +261,10 @@ export default function MapView() {
     })
   }, [])
 
-  // Derive visible zones
-  const visibleZoneSet = useMemo(() => new Set(visibleZoneIds), [visibleZoneIds])
+  // Update visible zone IDs when zones load or map bounds change
+  useEffect(() => {
+    setVisibleZoneIds(visibleZoneIdsFromZones)
+  }, [visibleZoneIdsFromZones])
 
   // Derive visible pipes and valve clusters from current bounds/zoom
   const { visiblePipes, visibleClusters, visibleIndividualValves } = useMemo(() => {
@@ -279,8 +311,8 @@ export default function MapView() {
   const handleBoundsChange = (bounds: L.LatLngBounds, zoom: number) => {
     setMapBounds(bounds)
     setMapZoom(zoom)
-    // Update zone visibility
-    const visible = ZONES.filter(z => bounds.contains([z.lat, z.lng])).map(z => z.id)
+    // Update zone visibility based on live zones
+    const visible = zones.filter(z => bounds.contains([z.lat, z.lng])).map(z => z.id)
     setVisibleZoneIds(visible)
   }
 
@@ -349,7 +381,7 @@ export default function MapView() {
             <MapStateTracker onBoundsChange={handleBoundsChange} />
 
             {/* Zone markers — only render if visible and toggled on */}
-            {showZones && ZONES.map((zone) => {
+            {showZones && zones.map((zone) => {
               if (!visibleZoneSet.has(zone.id)) return null
               return (
                 <ZoneMarker
@@ -361,13 +393,13 @@ export default function MapView() {
               )
             })}
 
-            {/* Pipe polylines from KML — viewport culled */}
+            {/* Pipe polylines from KML — viewport culled, colored by zone pressure status */}
             {showPipes && visiblePipes.map((pipe) => (
               <Polyline
                 key={`pipe-${pipe.id}`}
                 positions={pipe.coordinates}
                 pathOptions={{
-                  color: '#0A0A0A',
+                  color: pipeColor,
                   weight: pipe.diameter ? Math.max(2, Math.min(pipe.diameter / 50, 8)) : 3,
                   opacity: 0.6,
                 }}
@@ -430,19 +462,19 @@ export default function MapView() {
         {/* KPI Strip */}
         <div className="grid grid-cols-2 border-b-2 border-rule">
           {[
-            { label: 'ZONES ONLINE',    value: '8/8' },
-            { label: 'AVG PRESSURE',    value: '3.49 BAR' },
-            { label: 'CRITICAL',        value: '2' },
-            { label: 'SUSPECTED LEAKS', value: '1' },
-          ].map((kpi, i) => (
+            { label: 'ZONES ONLINE',    value: kpi ? `${kpi.zones_online}/${kpi.zones_total}` : '—' },
+            { label: 'AVG PRESSURE',    value: kpi ? `${kpi.avg_pressure.toFixed(2)} BAR` : '—' },
+            { label: 'CRITICAL',        value: kpi ? String(kpi.active_alerts) : '—' },
+            { label: 'SUSPECTED LEAKS', value: kpi ? String(kpi.leaks_flagged) : '—' },
+          ].map((kpiItem, i) => (
             <div
               key={i}
               className={`px-4 py-4 ${i % 2 === 0 ? 'border-r-2 border-rule' : ''} ${i < 2 ? 'border-b-2 border-rule' : ''}`}
             >
               <span className="font-condensed text-xs text-dim uppercase tracking-wider block mb-1">
-                {kpi.label}
+                {kpiItem.label}
               </span>
-              <span className="font-mono text-lg font-bold text-ink">{kpi.value}</span>
+              <span className="font-mono text-lg font-bold text-ink">{loadingApi && !kpi ? '…' : kpiItem.value}</span>
             </div>
           ))}
         </div>
@@ -483,10 +515,10 @@ export default function MapView() {
 
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {[
-                  { label: 'Pressure',      value: ZONE_DATA[selectedZone.id].pressure },
-                  { label: 'Valve',         value: ZONE_DATA[selectedZone.id].valve },
-                  { label: 'AI Confidence', value: ZONE_DATA[selectedZone.id].ai },
-                  { label: 'Reading',       value: ZONE_DATA[selectedZone.id].time },
+                  { label: 'Pressure',      value: `${selectedZone.pressure.toFixed(2)} bar` },
+                  { label: 'Valve',         value: `${selectedZone.valve_position}%` },
+                  { label: 'AI Confidence', value: `${selectedZone.ai_confidence}%` },
+                  { label: 'Reading',       value: selectedZone.last_reading },
                 ].map((item, i) => (
                   <div key={i} className="bg-ink/5 p-2 rounded">
                     <span className="font-condensed text-xs text-dim uppercase tracking-wider block">
@@ -498,15 +530,15 @@ export default function MapView() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <a href="#" className="font-condensed text-sm text-ink hover:text-signal transition-colors flex items-center gap-1">
+                <Link to={`/zones/${selectedZone.id}`} className="font-condensed text-sm text-ink hover:text-signal transition-colors flex items-center gap-1">
                   VIEW ZONE DETAIL <span className="text-xs">→</span>
-                </a>
-                <a href="#" className="font-condensed text-sm text-ink hover:text-signal transition-colors flex items-center gap-1">
+                </Link>
+                <Link to={`/zones/${selectedZone.id}`} className="font-condensed text-sm text-ink hover:text-signal transition-colors flex items-center gap-1">
                   VALVE CONTROL <span className="text-xs">→</span>
-                </a>
-                <a href="#" className="font-condensed text-sm text-ink hover:text-signal transition-colors flex items-center gap-1">
+                </Link>
+                <Link to={`/zones/${selectedZone.id}`} className="font-condensed text-sm text-ink hover:text-signal transition-colors flex items-center gap-1">
                   PRESSURE TREND <span className="text-xs">→</span>
-                </a>
+                </Link>
               </div>
             </div>
           )}
@@ -518,14 +550,17 @@ export default function MapView() {
             Active Alerts
           </h2>
           <div className="space-y-3">
-            {ACTIVE_ALERTS.map((alert, i) => {
-              const sevColor = alert.sev === 'crit' ? '#E8001D' : '#CC5500'
+            {alerts.length === 0 && !loadingApi && (
+              <p className="font-condensed text-sm text-dim text-center py-4">No active alerts</p>
+            )}
+            {alerts.map((alert, i) => {
+              const sevColor = alert.severity === 'crit' ? '#E8001D' : '#CC5500'
               return (
                 <div key={i} className="flex gap-3">
                   <div className="w-1 flex-shrink-0 rounded-full" style={{ backgroundColor: sevColor }} />
                   <div>
-                    <span className="font-syne font-bold text-xs text-ink block">{alert.zone}</span>
-                    <span className="font-condensed text-xs text-dim">{alert.msg}</span>
+                    <span className="font-syne font-bold text-xs text-ink block">{alert.zone_name}</span>
+                    <span className="font-condensed text-xs text-dim">{alert.message}</span>
                   </div>
                 </div>
               )
