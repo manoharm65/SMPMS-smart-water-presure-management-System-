@@ -1,14 +1,16 @@
+import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Sidebar from './components/layout/Sidebar'
 import Topbar from './components/layout/Topbar'
-import Home from './pages/Home'
-import MapView from './pages/MapView'
-import Overview from './pages/Overview'
-import ZoneDetail from './pages/ZoneDetail'
-import Alerts from './pages/Alerts'
-import Analytics from './pages/Analytics'
-import About from './pages/About'
-import Login from './pages/Login'
+
+const Home = lazy(() => import('./pages/Home'))
+const MapView = lazy(() => import('./pages/MapView'))
+const Overview = lazy(() => import('./pages/Overview'))
+const ZoneDetail = lazy(() => import('./pages/ZoneDetail'))
+const Alerts = lazy(() => import('./pages/Alerts'))
+const Analytics = lazy(() => import('./pages/Analytics'))
+const About = lazy(() => import('./pages/About'))
+const Login = lazy(() => import('./pages/Login'))
 
 function App() {
   return (
@@ -18,17 +20,19 @@ function App() {
         <div className="flex flex-col flex-1 overflow-hidden">
           <Topbar />
           <main className="flex-1 overflow-y-auto bg-paper">
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={<Home />} />
-              <Route path="/map" element={<MapView />} />
-              <Route path="/overview" element={<Overview />} />
-              <Route path="/zones/:zoneId" element={<ZoneDetail />} />
-              <Route path="/alerts" element={<Alerts />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/about" element={<About />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+            <Suspense fallback={<div className="p-4 text-sm text-text-muted">Loading…</div>}>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<Home />} />
+                <Route path="/map" element={<MapView />} />
+                <Route path="/overview" element={<Overview />} />
+                <Route path="/zones/:zoneId" element={<ZoneDetail />} />
+                <Route path="/alerts" element={<Alerts />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/about" element={<About />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
           </main>
         </div>
       </div>

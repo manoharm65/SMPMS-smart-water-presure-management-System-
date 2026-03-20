@@ -70,21 +70,31 @@ export default function MapControls({
         </div>
         <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1">
           <div className="flex items-center gap-2">
-            <span className="h-2 w-3 rounded-sm" style={{ background: '#00c896' }} />
-            <span className="text-text-muted">Normal</span>
+            <span className="h-2 w-3 rounded-sm" style={{ background: '#004DB3' }} />
+            <span className="text-text-muted">≥ 300mm</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-3 rounded-sm" style={{ background: '#0055ff' }} />
+            <span className="text-text-muted">200–299mm</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="h-2 w-3 rounded-sm" style={{ background: '#4a9ff5' }} />
-            <span className="text-text-muted">Low</span>
+            <span className="text-text-muted">100–199mm</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="h-2 w-3 rounded-sm" style={{ background: '#f5a623' }} />
-            <span className="text-text-muted">Warning</span>
+            <span className="h-2 w-3 rounded-sm" style={{ background: '#9ac7ff' }} />
+            <span className="text-text-muted">&lt; 100mm</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-3 rounded-sm" style={{ background: '#f04d4d' }} />
-            <span className="text-text-muted">Critical</span>
-          </div>
+        </div>
+
+        <div className="mt-2 flex items-center gap-2">
+          <span className="h-2 w-3 rounded-sm" style={{ background: '#4a9ff5' }} />
+          <span className="text-text-muted">Unknown diameter</span>
+        </div>
+
+        <div className="mt-2 flex items-center gap-2">
+          <span className="h-2 w-3 rounded-sm" style={{ background: '#8b5cf6' }} />
+          <span className="text-text-muted">Valve</span>
         </div>
 
         <div className="mt-2 flex items-center gap-2">
