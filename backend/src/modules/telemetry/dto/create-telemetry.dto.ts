@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, Min, ValidateNested } from 'class-validator';
+import { IsString, IsNumber, IsOptional, Min, Max, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CommandAckDto {
@@ -18,7 +18,8 @@ export class CreateTelemetryDto {
   nodeId!: string;
 
   @IsNumber()
-  @Min(0)
+  @Min(0, { message: 'Pressure cannot be negative' })
+  @Max(20, { message: 'Pressure cannot exceed 20 BAR' })
   pressure!: number;
 
   @IsNumber()

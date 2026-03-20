@@ -8,6 +8,7 @@ import { initDatabase, closeDatabase } from './database/db.js';
 import { decisionService } from './modules/decision/decision.service.js';
 import { alertService } from './modules/alert/alert.service.js';
 import { commandService } from './modules/command/command.service.js';
+import { globalErrorHandler, notFoundHandler } from './middleware/error-handler.js';
 
 // Import routers
 import authRouter from './modules/auth/auth.controller.js';
@@ -64,15 +65,10 @@ async function bootstrap() {
   app.use('/telemetry', telemetryRouter);
 
   // 404 handler
-  app.use((_req: Request, res: Response) => {
-    res.status(404).json({ error: 'Not found' });
-  });
+  app.use(notFoundHandler);
 
-  // Error handler
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    console.error('[Error]', err.message);
-    res.status(500).json({ error: 'Internal server error' });
-  });
+  // Global error handler
+  app.use(globalErrorHandler);
 
   // Start server
   const PORT = config.port;
