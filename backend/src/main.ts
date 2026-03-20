@@ -16,6 +16,7 @@ import telemetryRouter from './modules/telemetry/telemetry.controller.js';
 import alertRouter from './modules/alert/alert.controller.js';
 import commandRouter from './modules/command/command.controller.js';
 import healthRouter from './modules/health/health.controller.js';
+import dashboardRouter from './modules/dashboard/dashboard.controller.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -55,6 +56,7 @@ async function bootstrap() {
   app.use('/api/v1/telemetry', telemetryRouter);
   app.use('/api/v1/alerts', alertRouter);
   app.use('/api/v1/commands', commandRouter);
+  app.use('/api/v1/dashboard', dashboardRouter);
 
   // Legacy /telemetry route (for ESP32 compatibility)
   app.use('/telemetry', telemetryRouter);
@@ -92,6 +94,14 @@ async function bootstrap() {
    GET  /api/v1/alerts        - All alerts
    POST /api/v1/commands      - Manual command
    GET  /api/v1/nodes         - All nodes
+   GET  /api/v1/dashboard/zones         - Zone list with pressure/trend
+   GET  /api/v1/dashboard/kpi           - KPI metrics
+   GET  /api/v1/dashboard/alerts        - Active alerts
+   GET  /api/v1/dashboard/pressure-history/:zoneId - Pressure history
+   GET  /api/v1/dashboard/zones/:zoneId - Zone detail
+   GET  /api/v1/dashboard/zones/:zoneId/anomalies - AI anomalies
+   POST /api/v1/dashboard/zones/:zoneId/valve - Valve override
+   POST /api/v1/dashboard/zones/:zoneId/valve/revert - Revert to auto
 `);
   });
 
