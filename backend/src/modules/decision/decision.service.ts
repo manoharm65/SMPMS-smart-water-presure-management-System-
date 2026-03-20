@@ -1,7 +1,8 @@
-import { eventBus, TelemetryPayload, AlertPayload, ActionPayload } from '../../core/event-bus.js';
+import { eventBus, TelemetryPayload, AlertPayload, ActionPayload, ValveModePayload } from '../../core/event-bus.js';
 import { EVENTS } from '../../core/constants.js';
 import { decisionRepository } from '../../repositories/decision.repository.js';
 import { telemetryRepository } from '../../repositories/telemetry.repository.js';
+import { nodeRepository } from '../../repositories/node.repository.js';
 import { ruleEngine } from './rule.engine.js';
 import { TelemetryInput, DecisionOutput } from './decision.interface.js';
 
@@ -79,11 +80,35 @@ export class DecisionService {
         message: decision.reason,
         riskLevel: decision.risk_level,
       });
-      eventBus.emitActionDispatched({
+
+      // CRITICAL auto-revert: if node is in override mode, revert to auto before dispatching
+      if (decision.risk_level === 'CRITICAL') {
+        const valveState = nodeRepository.getValveState(payload.nodeId);
+        if (valveState?.mode === 'override') {
+          console.log(`[Decision] CRITICAL on override node ${payload.nodeId} — auto-reverting to auto`);
+
+          // Emit valve mode changed event (auto-revert)
+          const valveModePayload: ValveModePayload = {
+            nodeId: payload.nodeId,
+            previousMode: 'override',
+            newMode: 'auto',
+            reason: 'critical_auto_revert',
+            pressure: payload.pressure,
+          };
+          eventBus.emitValveModeChanged(valveModePayload);
+        }
+      }
+
+      // Emit action dispatched with risk level and target position for priority handling
+      const actionPayload: ActionPayload = {
         nodeId: payload.nodeId,
         command: decision.action,
         commandId: decisionRecord.id,
-      });
+        riskLevel: decision.risk_level,
+        targetPosition: decision.recommended_valve_position,
+        pressure: payload.pressure,
+      };
+      eventBus.emitActionDispatched(actionPayload);
     }
     // LOW: emit ALERT_TRIGGERED only
     else if (decision.risk_level === 'LOW' && decision.requires_alert) {
