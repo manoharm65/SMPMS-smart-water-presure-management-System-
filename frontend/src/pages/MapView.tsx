@@ -1,26 +1,18 @@
 import { useState } from 'react'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
 
-const valves = [
-  { id:'DMA-01', x:150, y:200, status:'ok'   },
-  { id:'DMA-02', x:310, y:178, status:'warn' },
-  { id:'DMA-03', x:172, y:320, status:'low'  },
-  { id:'DMA-04', x:456, y:308, status:'ok'   },
-  { id:'DMA-05', x:324, y:302, status:'crit' },
-  { id:'DMA-06', x:338, y:406, status:'ok'   },
-  { id:'DMA-07', x:460, y:192, status:'ok'   },
-  { id:'DMA-08', x:180, y:412, status:'crit' },
-]
+// Fix default marker icon
+delete (L.Icon.Default.prototype as any)._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+})
 
-const zonePolys = [
-  { id:'DMA-01', points:"72,130 228,112 246,232 90,248", color:'#007A3D' },
-  { id:'DMA-02', points:"228,112 386,126 402,240 246,232", color:'#004DB3' },
-  { id:'DMA-03', points:"90,248 246,232 258,360 102,370", color:'#007A3D' },
-  { id:'DMA-05', points:"246,232 402,240 414,358 258,360", color:'#E8001D' },
-  { id:'DMA-08', points:"102,370 258,360 268,456 112,466", color:'#E8001D' },
-  { id:'DMA-06', points:"258,360 414,358 424,456 268,456", color:'#007A3D' },
-  { id:'DMA-07', points:"386,126 514,140 504,248 402,240", color:'#007A3D' },
-  { id:'DMA-04', points:"402,240 504,248 494,358 414,358", color:'#CC5500' },
-]
+// Bengaluru center
+const BENGALURU_CENTER: [number, number] = [12.9716, 77.5946]
 
 const STATUS_COLORS: Record<string, string> = {
   ok:   '#007A3D',
@@ -46,223 +38,144 @@ const ACTIVE_ALERTS = [
   { zone: 'DMA-02 South',    sev: 'warn', msg: 'Elevated reading — 4.80 bar' },
 ]
 
+// Zone markers positioned around Bengaluru
+const ZONES = [
+  { id: 'DMA-01', name: 'North',      lat: 13.05, lng: 77.59, status: 'ok'   },
+  { id: 'DMA-02', name: 'South',      lat: 12.91, lng: 77.62, status: 'warn' },
+  { id: 'DMA-03', name: 'East',       lat: 12.93, lng: 77.72, status: 'low'  },
+  { id: 'DMA-04', name: 'West',       lat: 12.97, lng: 77.52, status: 'ok'   },
+  { id: 'DMA-05', name: 'Central',    lat: 12.98, lng: 77.59, status: 'crit' },
+  { id: 'DMA-06', name: 'Elevated',   lat: 12.88, lng: 77.58, status: 'ok'  },
+  { id: 'DMA-07', name: 'Industrial', lat: 12.95, lng: 77.50, status: 'ok'   },
+  { id: 'DMA-08', name: 'Tail-end',   lat: 12.85, lng: 77.65, status: 'crit' },
+]
+
+function createValveIcon(status: string, isSelected: boolean) {
+  const color = STATUS_COLORS[status]
+  const size = isSelected ? 28 : 24
+  return L.divIcon({
+    className: 'custom-valve-marker',
+    html: `
+      <div style="
+        width: ${size}px;
+        height: ${size}px;
+        background: ${color};
+        border: 2px solid ${isSelected ? '#F5F0E8' : 'none'};
+        border-radius: ${status === 'crit' ? '50%' : '2px'};
+        box-shadow: 0 0 8px ${color}80;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      ">
+        ${status === 'crit' ? `
+          <div style="
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 1.5s ease-out infinite;
+          "></div>
+        ` : ''}
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  })
+}
+
+function ZoneMarker({ zone, selected, onSelect }: { zone: typeof ZONES[0], selected: boolean, onSelect: (id: string) => void }) {
+  const icon = createValveIcon(zone.status, selected)
+
+  return (
+    <Marker
+      position={[zone.lat, zone.lng]}
+      icon={icon}
+      eventHandlers={{
+        click: () => onSelect(zone.id),
+      }}
+    >
+      <Popup>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", minWidth: 140 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{zone.id} — {zone.name}</div>
+          <div style={{ fontSize: 11, color: '#6B6B6B', marginBottom: 6 }}>
+            Pressure: <strong style={{ color: STATUS_COLORS[zone.status] }}>{ZONE_DATA[zone.id].pressure}</strong>
+          </div>
+          <button
+            onClick={() => onSelect(zone.id)}
+            style={{
+              background: '#0A0A0A',
+              color: '#F5F0E8',
+              border: 'none',
+              padding: '4px 8px',
+              fontSize: 11,
+              cursor: 'pointer',
+              fontFamily: "'Barlow Condensed', sans-serif",
+            }}
+          >
+            Select Zone →
+          </button>
+        </div>
+      </Popup>
+    </Marker>
+  )
+}
+
 export default function MapView() {
   const [selected, setSelected] = useState<string | null>(null)
-  const [viewBox, setViewBox] = useState('0 0 600 600')
-  const [showPipelines, setShowPipelines] = useState(true)
   const [showZones, setShowZones] = useState(true)
-  const [showValves, setShowValves] = useState(true)
 
-  const zoomIn = () => {
-    const [minX, minY, w, h] = viewBox.split(' ').map(Number)
-    const factor = 0.8
-    setViewBox(`${minX + w * (1 - factor) / 2} ${minY + h * (1 - factor) / 2} ${w * factor} ${h * factor}`)
-  }
-
-  const zoomOut = () => {
-    const [minX, minY, w, h] = viewBox.split(' ').map(Number)
-    const factor = 1.25
-    setViewBox(`${minX - w * (factor - 1) / 2} ${minY - h * (factor - 1) / 2} ${w * factor} ${h * factor}`)
-  }
-
-  const resetView = () => {
-    setViewBox('0 0 600 600')
-  }
-
-  const pipelineConnections = [
-    ['DMA-01', 'DMA-02'],
-    ['DMA-02', 'DMA-04'],
-    ['DMA-02', 'DMA-05'],
-    ['DMA-01', 'DMA-03'],
-    ['DMA-03', 'DMA-05'],
-    ['DMA-05', 'DMA-06'],
-    ['DMA-03', 'DMA-08'],
-    ['DMA-05', 'DMA-08'],
-    ['DMA-04', 'DMA-07'],
-    ['DMA-07', 'DMA-05'],
-  ]
-
-  const getValveCoords = (id: string) => {
-    const v = valves.find(v => v.id === id)
-    return v ? { x: v.x, y: v.y, status: v.status } : null
-  }
-
-  const selectedValve = selected ? valves.find(v => v.id === selected) : null
+  const selectedZone = selected ? ZONES.find(z => z.id === selected) : null
 
   return (
     <div className="flex flex-1 overflow-hidden bg-paper">
-      {/* LEFT: Black SVG Map */}
-      <div className="flex-[0_0_62%] bg-ink flex flex-col">
+      {/* LEFT: OSM Map */}
+      <div className="flex-[0_0_62%] flex flex-col">
         {/* Map Header */}
-        <div className="h-[42px] flex items-center justify-between px-4 border-b border-rule text-paper">
-          <span className="font-mono text-xs font-bold uppercase tracking-wider">
-            Solapur — DMA Network
+        <div className="h-[42px] flex items-center justify-between px-4 border-b-2 border-rule bg-paper">
+          <span className="font-condensed text-xs font-bold uppercase tracking-wider text-ink">
+            Bengaluru — DMA Network
           </span>
           <div className="flex items-center gap-4">
-            {/* Layer toggles */}
-            <label className="flex items-center gap-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showZones}
-                onChange={(e) => setShowZones(e.target.checked)}
-                className="sr-only"
-              />
-              <span className={`font-mono text-xs ${showZones ? 'text-pass' : 'text-dim'}`}>ZONES</span>
-            </label>
-            <label className="flex items-center gap-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showPipelines}
-                onChange={(e) => setShowPipelines(e.target.checked)}
-                className="sr-only"
-              />
-              <span className={`font-mono text-xs ${showPipelines ? 'text-pass' : 'text-dim'}`}>PIPES</span>
-            </label>
-            <label className="flex items-center gap-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showValves}
-                onChange={(e) => setShowValves(e.target.checked)}
-                className="sr-only"
-              />
-              <span className={`font-mono text-xs ${showValves ? 'text-pass' : 'text-dim'}`}>VALVES</span>
-            </label>
-
-            <div className="w-px h-4 bg-dim" />
-
-            {/* Zoom controls */}
             <button
-              onClick={zoomIn}
-              className="font-mono text-xs text-paper hover:text-pass transition-colors px-1"
+              onClick={() => setShowZones(!showZones)}
+              className={`font-condensed text-xs font-bold uppercase tracking-wider transition-colors ${
+                showZones ? 'text-pass' : 'text-dim'
+              }`}
             >
-              +
-            </button>
-            <button
-              onClick={zoomOut}
-              className="font-mono text-xs text-paper hover:text-pass transition-colors px-1"
-            >
-              −
-            </button>
-            <button
-              onClick={resetView}
-              className="font-mono text-xs text-dim hover:text-pass transition-colors"
-            >
-              RESET
+              ZONES
             </button>
           </div>
         </div>
 
-        {/* SVG Canvas */}
-        <div className="flex-1 relative overflow-hidden">
-          <svg
-            viewBox={viewBox}
-            className="w-full h-full"
-            style={{ backgroundColor: '#0A0A0A' }}
+        {/* Leaflet Map */}
+        <div className="flex-1 relative">
+          <MapContainer
+            center={BENGALURU_CENTER}
+            zoom={12}
+            style={{ height: '100%', width: '100%' }}
+            zoomControl={true}
           >
-            {/* Grid pattern */}
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1A1A1A" strokeWidth="0.5" />
-              </pattern>
-            </defs>
-
-            <rect x="0" y="0" width="600" height="600" fill="url(#grid)" />
-
-            {/* Zone Polygons */}
-            {showZones && zonePolys.map((zone) => (
-              <polygon
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {showZones && ZONES.map((zone) => (
+              <ZoneMarker
                 key={zone.id}
-                points={zone.points}
-                fill={zone.color + '15'}
-                stroke={zone.color}
-                strokeWidth="1.5"
-                strokeDasharray="4 2"
-                className="cursor-pointer hover:fill-opacity-30 transition-all"
-                onClick={() => setSelected(zone.id)}
+                zone={zone}
+                selected={selected === zone.id}
+                onSelect={setSelected}
               />
             ))}
+          </MapContainer>
 
-            {/* Pipelines */}
-            {showPipelines && pipelineConnections.map((conn, i) => {
-              const from = getValveCoords(conn[0])
-              const to = getValveCoords(conn[1])
-              if (!from || !to) return null
-              const midX = (from.x + to.x) / 2
-              const midY = (from.y + to.y) / 2
-              const status = from.status
-              const color = STATUS_COLORS[status]
-              return (
-                <g key={i}>
-                  <line
-                    x1={from.x}
-                    y1={from.y}
-                    x2={to.x}
-                    y2={to.y}
-                    stroke={color}
-                    strokeWidth="2"
-                    strokeOpacity="0.6"
-                  />
-                  {/* Flow arrow */}
-                  <polygon
-                    points={`${midX - 4},${midY - 6} ${midX + 4},${midY} ${midX - 4},${midY + 6}`}
-                    fill={color}
-                    fillOpacity="0.8"
-                  />
-                </g>
-              )
-            })}
-
-            {/* Valve Nodes */}
-            {showValves && valves.map((valve) => {
-              const color = STATUS_COLORS[valve.status]
-              const isCritical = valve.status === 'crit'
-              const isSelected = selected === valve.id
-
-              return (
-                <g
-                  key={valve.id}
-                  className="cursor-pointer"
-                  onClick={() => setSelected(valve.id)}
-                >
-                  {/* Pulse ring for critical valves */}
-                  {isCritical && (
-                    <circle
-                      cx={valve.x}
-                      cy={valve.y}
-                      r="20"
-                      fill="none"
-                      stroke={color}
-                      strokeWidth="2"
-                      className="animate-pulse"
-                    />
-                  )}
-
-                  {/* Valve square */}
-                  <rect
-                    x={valve.x - 8}
-                    y={valve.y - 8}
-                    width="16"
-                    height="16"
-                    fill={color}
-                    stroke={isSelected ? '#F5F0E8' : 'none'}
-                    strokeWidth={isSelected ? 2 : 0}
-                  />
-
-                  {/* Label */}
-                  <text
-                    x={valve.x}
-                    y={valve.y + 22}
-                    textAnchor="middle"
-                    fill="#B8B2A8"
-                    fontSize="9"
-                    fontFamily="Space Mono, monospace"
-                  >
-                    {valve.id}
-                  </text>
-                </g>
-              )
-            })}
-          </svg>
+          {/* Map overlay label */}
+          <div className="absolute bottom-3 left-3 z-[1000] bg-paper/90 border border-rule px-3 py-1.5">
+            <span className="font-condensed text-[10px] text-dim uppercase tracking-wider">
+              OpenStreetMap — Bengaluru, Karnataka
+            </span>
+          </div>
         </div>
       </div>
 
@@ -276,7 +189,10 @@ export default function MapView() {
             { label: 'CRITICAL',       value: '2' },
             { label: 'SUSPECTED LEAKS', value: '1' },
           ].map((kpi, i) => (
-            <div key={i} className={`px-4 py-4 ${i % 2 === 0 ? 'border-r-2 border-rule' : ''} ${i < 2 ? 'border-b-2 border-rule' : ''}`}>
+            <div
+              key={i}
+              className={`px-4 py-4 ${i % 2 === 0 ? 'border-r-2 border-rule' : ''} ${i < 2 ? 'border-b-2 border-rule' : ''}`}
+            >
               <span className="font-condensed text-xs text-dim uppercase tracking-wider block mb-1">
                 {kpi.label}
               </span>
@@ -299,32 +215,32 @@ export default function MapView() {
             </button>
           </div>
 
-          {!selectedValve ? (
+          {!selectedZone ? (
             <p className="font-condensed text-sm text-dim text-center py-8">
-              — SELECT A VALVE NODE ON THE MAP —
+              — CLICK A ZONE MARKER ON THE MAP —
             </p>
           ) : (
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-syne font-bold text-lg text-ink">{selectedValve.id}</h3>
+                <h3 className="font-syne font-bold text-lg text-ink">{selectedZone.id}</h3>
                 <span
                   className={`font-condensed text-xs font-semibold px-2 py-1 text-paper ${
-                    selectedValve.status === 'crit' ? 'bg-signal' :
-                    selectedValve.status === 'warn' ? 'bg-warn' :
-                    selectedValve.status === 'low' ? 'bg-low' :
+                    selectedZone.status === 'crit' ? 'bg-signal' :
+                    selectedZone.status === 'warn' ? 'bg-warn' :
+                    selectedZone.status === 'low' ? 'bg-low' :
                     'bg-pass'
                   }`}
                 >
-                  {selectedValve.status.toUpperCase()}
+                  {selectedZone.status.toUpperCase()}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {[
-                  { label: 'Pressure',    value: ZONE_DATA[selectedValve.id].pressure },
-                  { label: 'Valve',       value: ZONE_DATA[selectedValve.id].valve },
-                  { label: 'AI Confidence', value: ZONE_DATA[selectedValve.id].ai },
-                  { label: 'Reading',     value: ZONE_DATA[selectedValve.id].time },
+                  { label: 'Pressure',    value: ZONE_DATA[selectedZone.id].pressure },
+                  { label: 'Valve',       value: ZONE_DATA[selectedZone.id].valve },
+                  { label: 'AI Confidence', value: ZONE_DATA[selectedZone.id].ai },
+                  { label: 'Reading',     value: ZONE_DATA[selectedZone.id].time },
                 ].map((item, i) => (
                   <div key={i} className="bg-ink/5 p-2 rounded">
                     <span className="font-condensed text-xs text-dim uppercase tracking-wider block">
@@ -386,15 +302,18 @@ export default function MapView() {
           </h2>
           <div className="space-y-2">
             {[
-              { color: '#E8001D', label: 'Critical' },
-              { color: '#CC5500', label: 'Warning' },
-              { color: '#004DB3', label: 'Low Pressure' },
-              { color: '#007A3D', label: 'Normal' },
+              { color: '#E8001D', label: 'Critical', shape: 'circle' },
+              { color: '#CC5500', label: 'Warning', shape: 'square' },
+              { color: '#004DB3', label: 'Low Pressure', shape: 'square' },
+              { color: '#007A3D', label: 'Normal', shape: 'square' },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-2">
                 <div
-                  className="w-4 h-4 rounded-sm flex-shrink-0"
-                  style={{ backgroundColor: item.color }}
+                  className="w-4 h-4 flex-shrink-0"
+                  style={{
+                    backgroundColor: item.color,
+                    borderRadius: item.shape === 'circle' ? '50%' : '2px',
+                  }}
                 />
                 <span className="font-condensed text-xs text-dim">{item.label}</span>
               </div>
@@ -403,12 +322,12 @@ export default function MapView() {
 
           <div className="mt-4 pt-4 border-t border-rule">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-dim rounded-sm" />
-              <span className="font-condensed text-xs text-dim">Valve Node (square)</span>
+              <div className="w-4 h-4 border border-dim rounded-sm" />
+              <span className="font-condensed text-xs text-dim">Zone Marker</span>
             </div>
             <div className="flex items-center gap-2 mt-2">
               <div className="w-4 h-0.5 bg-pass" />
-              <span className="font-condensed text-xs text-dim">Pipeline</span>
+              <span className="font-condensed text-xs text-dim">OSM Standard Layer</span>
             </div>
           </div>
         </div>
