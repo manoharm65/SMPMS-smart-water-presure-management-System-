@@ -1,18 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Chart, registerables } from 'chart.js'
+import { getZones, getKPI, getPressureHistory, usePolling, type Zone, type KPI, type PressureHistory } from '../services/api'
 
 Chart.register(...registerables)
-
-const ZONES = [
-  { id: 'DMA-01', name: 'North',      pres: 3.20, valve: 78, ai: 97, status: 'ok'   },
-  { id: 'DMA-02', name: 'South',      pres: 4.80, valve: 42, ai: 88, status: 'warn' },
-  { id: 'DMA-03', name: 'East',       pres: 2.10, valve: 92, ai: 82, status: 'low'  },
-  { id: 'DMA-04', name: 'West',       pres: 3.50, valve: 71, ai: 99, status: 'ok'   },
-  { id: 'DMA-05', name: 'Central',    pres: 6.20, valve: 18, ai: 99, status: 'crit' },
-  { id: 'DMA-06', name: 'Elevated',   pres: 2.80, valve: 84, ai: 96, status: 'ok'  },
-  { id: 'DMA-07', name: 'Industrial', pres: 3.90, valve: 68, ai: 98, status: 'ok'   },
-  { id: 'DMA-08', name: 'Tail-end',   pres: 1.40, valve: 98, ai: 91, status: 'crit' },
-]
 
 const statusColors: Record<string, string> = {
   ok: '#007A3D',
@@ -21,19 +11,85 @@ const statusColors: Record<string, string> = {
   crit: '#E8001D',
 }
 
-const DMA_OPTIONS = [
-  { value: 'dma-05', label: 'DMA-05 Central' },
-  { value: 'dma-08', label: 'DMA-08 Tail-end' },
-  { value: 'dma-02', label: 'DMA-02 South' },
-]
+const trendIcons: Record<string, string> = {
+  up: '↑',
+  down: '↓',
+  stable: '→',
+}
 
 export default function Overview() {
   const chartRef = useRef<HTMLCanvasElement>(null)
   const chartInstanceRef = useRef<Chart | null>(null)
-  const [selectedDma, setSelectedDma] = useState('dma-05')
+  const [zones, setZones] = useState<Zone[]>([])
+  const [kpi, setKpi] = useState<KPI | null>(null)
+  const [pressureHistory, setPressureHistory] = useState<PressureHistory | null>(null)
+  const [selectedDma, setSelectedDma] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [chartLoading, setChartLoading] = useState(false)
+
+  const fetchZones = useCallback(async () => {
+    try {
+      const data = await getZones()
+      setZones(data)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch zones')
+    }
+  }, [])
+
+  const fetchKpi = useCallback(async () => {
+    try {
+      const data = await getKPI()
+      setKpi(data)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch KPI')
+    }
+  }, [])
+
+  const fetchPressureHistory = useCallback(async (zoneId: string) => {
+    setChartLoading(true)
+    try {
+      const data = await getPressureHistory(zoneId, '24h')
+      setPressureHistory(data)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch pressure history')
+    } finally {
+      setChartLoading(false)
+    }
+  }, [])
+
+  const refreshData = useCallback(async () => {
+    await Promise.all([fetchZones(), fetchKpi()])
+    if (selectedDma) {
+      await fetchPressureHistory(selectedDma)
+    }
+  }, [fetchZones, fetchKpi, fetchPressureHistory, selectedDma])
+
+  usePolling(refreshData, 30000, !loading)
 
   useEffect(() => {
-    if (!chartRef.current) return
+    refreshData().finally(() => setLoading(false))
+  }, [refreshData])
+
+  useEffect(() => {
+    if (zones.length > 0 && !selectedDma) {
+      const firstZone = zones[0]
+      const zoneIdLower = firstZone.id.toLowerCase()
+      setSelectedDma(zoneIdLower)
+    }
+  }, [zones, selectedDma])
+
+  useEffect(() => {
+    if (selectedDma) {
+      fetchPressureHistory(selectedDma)
+    }
+  }, [selectedDma, fetchPressureHistory])
+
+  useEffect(() => {
+    if (!chartRef.current || !pressureHistory) return
 
     if (chartInstanceRef.current) {
       chartInstanceRef.current.destroy()
@@ -42,40 +98,21 @@ export default function Overview() {
     const ctx = chartRef.current.getContext('2d')
     if (!ctx) return
 
-    const hours = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`)
-    const generateData = (base: number, variance: number) =>
-      hours.map(() => base + (Math.random() - 0.5) * variance)
+    const labels = pressureHistory.readings.map(r => r.label)
+    const data = pressureHistory.readings.map(r => r.pressure)
+    const selectedZone = zones.find(z => z.id.toLowerCase() === selectedDma)
+    const zoneLabel = selectedZone ? `${selectedZone.id} ${selectedZone.name}` : selectedDma
 
     chartInstanceRef.current = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: hours,
+        labels,
         datasets: [
           {
-            label: 'DMA-05 Central',
-            data: generateData(5.8, 0.8),
+            label: zoneLabel,
+            data,
             borderColor: '#E8001D',
             backgroundColor: 'rgba(232, 0, 29, 0.1)',
-            borderWidth: 2,
-            tension: 0.3,
-            pointRadius: 0,
-            fill: true,
-          },
-          {
-            label: 'DMA-08 Tail-end',
-            data: generateData(1.6, 0.4),
-            borderColor: '#CC5500',
-            backgroundColor: 'rgba(204, 85, 0, 0.1)',
-            borderWidth: 2,
-            tension: 0.3,
-            pointRadius: 0,
-            fill: true,
-          },
-          {
-            label: 'DMA-02 South',
-            data: generateData(4.5, 0.6),
-            borderColor: '#004DB3',
-            backgroundColor: 'rgba(0, 77, 179, 0.1)',
             borderWidth: 2,
             tension: 0.3,
             pointRadius: 0,
@@ -135,7 +172,7 @@ export default function Overview() {
         chartInstanceRef.current = null
       }
     }
-  }, [])
+  }, [pressureHistory, selectedDma, zones])
 
   return (
     <div className="bg-paper min-h-screen">
@@ -166,7 +203,7 @@ export default function Overview() {
             Zones Online
           </div>
           <div className="font-mono text-[42px] leading-none" style={{ color: '#007A3D' }}>
-            8/8
+            {loading ? '-' : kpi ? `${kpi.zones_online}/${kpi.zones_total}` : '-'}
           </div>
         </div>
         <div className="px-4 py-3 border-r border-rule">
@@ -174,7 +211,7 @@ export default function Overview() {
             Avg Pressure
           </div>
           <div className="font-mono text-[42px] leading-none text-ink">
-            3.49 BAR
+            {loading ? '-' : kpi ? `${kpi.avg_pressure.toFixed(2)} BAR` : '-'}
           </div>
         </div>
         <div className="px-4 py-3 border-r border-rule">
@@ -182,7 +219,7 @@ export default function Overview() {
             Active Alerts
           </div>
           <div className="font-mono text-[42px] leading-none" style={{ color: '#E8001D' }}>
-            3
+            {loading ? '-' : kpi ? kpi.active_alerts : '-'}
           </div>
         </div>
         <div className="px-4 py-3 border-r border-rule">
@@ -190,7 +227,7 @@ export default function Overview() {
             Leaks Flagged
           </div>
           <div className="font-mono text-[42px] leading-none" style={{ color: '#CC5500' }}>
-            1
+            {loading ? '-' : kpi ? kpi.leaks_flagged : '-'}
           </div>
         </div>
         <div className="px-4 py-3">
@@ -198,7 +235,7 @@ export default function Overview() {
             Valve Ops
           </div>
           <div className="font-mono text-[42px] leading-none text-ink">
-            14
+            {loading ? '-' : kpi ? kpi.valve_ops : '-'}
           </div>
         </div>
       </div>
@@ -212,7 +249,7 @@ export default function Overview() {
               ALL DMA ZONES
             </h2>
             <span className="font-mono text-[14px] text-dim">
-              {ZONES.length} zones
+              {loading ? '-' : zones.length} zones
             </span>
           </div>
 
@@ -241,46 +278,54 @@ export default function Overview() {
                 </tr>
               </thead>
               <tbody>
-                {ZONES.map((zone) => (
-                  <tr
-                    key={zone.id}
-                    className="border-b border-rule/50 hover:bg-ink hover:text-paper transition-colors duration-150"
-                  >
-                    <td className="py-3">
-                      <div className="font-mono text-[13px] font-bold">{zone.id}</div>
-                      <div className="font-condensed text-[11px] text-dim">{zone.name}</div>
-                    </td>
-                    <td className="py-3 font-mono text-[14px]">
-                      {zone.pres.toFixed(2)} BAR
-                    </td>
-                    <td className="py-3 font-mono text-[14px]">
-                      {zone.valve}%
-                    </td>
-                    <td className="py-3">
-                      <span
-                        className="px-2 py-0.5 font-condensed text-[10px] uppercase tracking-wider border"
-                        style={{
-                          color: statusColors[zone.status],
-                          borderColor: statusColors[zone.status],
-                        }}
-                      >
-                        {zone.status}
-                      </span>
-                    </td>
-                    <td className="py-3 font-mono text-[14px]">
-                      {zone.ai}%
-                    </td>
-                    <td className="py-3">
-                      {zone.pres > 3.5 ? (
-                        <span className="text-[16px]">↑</span>
-                      ) : zone.pres < 2.5 ? (
-                        <span className="text-[16px]">↓</span>
-                      ) : (
-                        <span className="text-[16px]">→</span>
-                      )}
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center font-condensed text-[12px] text-dim">
+                      Loading zones...
                     </td>
                   </tr>
-                ))}
+                ) : zones.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center font-condensed text-[12px] text-dim">
+                      No zones available
+                    </td>
+                  </tr>
+                ) : (
+                  zones.map((zone) => (
+                    <tr
+                      key={zone.id}
+                      className="border-b border-rule/50 hover:bg-ink hover:text-paper transition-colors duration-150"
+                    >
+                      <td className="py-3">
+                        <div className="font-mono text-[13px] font-bold">{zone.id}</div>
+                        <div className="font-condensed text-[11px] text-dim">{zone.name}</div>
+                      </td>
+                      <td className="py-3 font-mono text-[14px]">
+                        {zone.pressure.toFixed(2)} BAR
+                      </td>
+                      <td className="py-3 font-mono text-[14px]">
+                        {zone.valve_position}%
+                      </td>
+                      <td className="py-3">
+                        <span
+                          className="px-2 py-0.5 font-condensed text-[10px] uppercase tracking-wider border"
+                          style={{
+                            color: statusColors[zone.status],
+                            borderColor: statusColors[zone.status],
+                          }}
+                        >
+                          {zone.status}
+                        </span>
+                      </td>
+                      <td className="py-3 font-mono text-[14px]">
+                        {zone.ai_confidence}%
+                      </td>
+                      <td className="py-3">
+                        <span className="text-[16px]">{trendIcons[zone.trend] || '→'}</span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -296,20 +341,36 @@ export default function Overview() {
               value={selectedDma}
               onChange={(e) => setSelectedDma(e.target.value)}
               className="font-condensed text-[11px] px-2 py-1 border border-rule bg-paper text-ink"
+              disabled={loading}
             >
-              {DMA_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+              {zones.map((zone) => (
+                <option key={zone.id.toLowerCase()} value={zone.id.toLowerCase()}>
+                  {zone.id} {zone.name}
                 </option>
               ))}
             </select>
           </div>
 
-          <div className="h-[300px]">
+          <div className="h-[300px] relative">
+            {chartLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-paper/80 z-10">
+                <span className="font-condensed text-[12px] text-dim">Loading chart...</span>
+              </div>
+            )}
             <canvas ref={chartRef} />
           </div>
         </div>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="fixed bottom-4 right-4 px-4 py-3 bg-ink text-paper border border-rule rounded">
+          <div className="font-condensed text-[11px] uppercase tracking-wider text-ink">
+            Error
+          </div>
+          <div className="font-mono text-[12px]">{error}</div>
+        </div>
+      )}
     </div>
   )
 }

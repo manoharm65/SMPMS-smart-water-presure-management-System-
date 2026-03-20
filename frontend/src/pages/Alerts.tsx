@@ -1,17 +1,10 @@
-import { useState } from 'react'
-
-const ALERTS = [
-  { id:1, zone:'DMA-05 Central',    sev:'crit', msg:'Overpressure sustained — 6.20 bar exceeds 5.5 bar hard limit. Valve throttled to 18%. Pressure still rising.',      pres:'6.20', ai:'99%', time:'14:28:41' },
-  { id:2, zone:'DMA-08 Tail-end',   sev:'crit', msg:'Pressure drop anomaly detected. Suspected pipe leak. Estimated loss 0.3 L/s. Field inspection required immediately.', pres:'1.40', ai:'91%', time:'14:15:03' },
-  { id:3, zone:'DMA-02 South',      sev:'warn', msg:'Elevated reading — 4.80 bar above soft limit of 4.5 bar. Valve throttled from 65% to 42%.',                          pres:'4.80', ai:'88%', time:'13:52:17' },
-  { id:4, zone:'DMA-01 North',      sev:'res',  msg:'Pressure stabilised. Returned to 3.20 bar within normal range after auto valve adjustment.',                          pres:'3.20', ai:'94%', time:'11:22:30' },
-  { id:5, zone:'DMA-07 Industrial', sev:'res',  msg:'Supply interruption resolved after valve reset. Pressure normalised over 14 minutes.',                               pres:'3.90', ai:'97%', time:'09:05:14' },
-]
+import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
+import { getAlerts, usePolling, type Alert } from '../services/api'
 
 const SEV_COLORS = {
   crit: '#E8001D',
   warn: '#CC5500',
-  res:  '#007A3D',
   low:  '#004DB3',
 }
 
@@ -19,17 +12,56 @@ const FILTERS = ['ALL', 'CRITICAL', 'WARNING', 'RESOLVED'] as const
 type Filter = typeof FILTERS[number]
 
 export default function Alerts() {
+  const [alerts, setAlerts] = useState<Alert[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('ALL')
+  const [isLive, setIsLive] = useState(false)
 
-  const unackCount = ALERTS.filter(a => a.sev === 'crit' || a.sev === 'warn').length
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const data = await getAlerts()
+      setAlerts(data)
+      setError(null)
+      setIsLive(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch alerts')
+      setIsLive(false)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchAlerts()
+  }, [fetchAlerts])
+
+  usePolling(fetchAlerts, 30000, true)
+
+  const unackCount = alerts.filter(a => a.severity === 'crit' || a.severity === 'warn').length
 
   const filtered = filter === 'ALL'
-    ? ALERTS
+    ? alerts
     : filter === 'CRITICAL'
-    ? ALERTS.filter(a => a.sev === 'crit')
+    ? alerts.filter(a => a.severity === 'crit')
     : filter === 'WARNING'
-    ? ALERTS.filter(a => a.sev === 'warn')
-    : ALERTS.filter(a => a.sev === 'res')
+    ? alerts.filter(a => a.severity === 'warn')
+    : []
+
+  const handleAcknowledge = (alert: Alert) => {
+    console.log('Acknowledge alert:', alert.id)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-paper text-ink font-condensed flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="font-mono text-sm text-dim">Loading alerts...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-paper text-ink font-condensed">
@@ -38,16 +70,28 @@ export default function Alerts() {
         <div className="flex items-baseline justify-between">
           <h1 className="font-syne font-black text-4xl tracking-tight text-ink">ALERT LOG</h1>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-signal animate-pulse" />
-            <span className="font-mono text-sm text-signal font-bold">
+            {isLive && (
+              <>
+                <span className="w-2 h-2 rounded-full bg-signal animate-pulse" />
+                <span className="font-mono text-xs text-signal font-bold">LIVE</span>
+              </>
+            )}
+            <span className="font-mono text-sm text-dim font-bold ml-4">
               {unackCount} UNACKNOWLEDGED
             </span>
           </div>
         </div>
         <p className="font-mono text-xs text-dim mt-2">
-          14 March 2026 · All DMA zones · Ordered by severity
+          All DMA zones · Ordered by severity
         </p>
       </header>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="px-8 py-3 bg-red-50 border-b-2 border-red-200">
+          <p className="font-mono text-xs text-red-600">Error: {error}</p>
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex gap-0 px-8 border-b-2 border-rule">
@@ -69,14 +113,11 @@ export default function Alerts() {
       {/* Alert List */}
       <div className="divide-y-0">
         {filtered.map((alert) => {
-          const color = SEV_COLORS[alert.sev as keyof typeof SEV_COLORS]
-          const isResolved = alert.sev === 'res'
+          const color = SEV_COLORS[alert.severity as keyof typeof SEV_COLORS]
           return (
             <article
               key={alert.id}
-              className={`flex gap-0 px-8 py-5 border-b-2 border-rule ${
-                isResolved ? 'opacity-50' : ''
-              }`}
+              className="flex gap-0 px-8 py-5 border-b-2 border-rule"
             >
               {/* Vertical bar */}
               <div
@@ -88,37 +129,30 @@ export default function Alerts() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline justify-between gap-4 mb-2">
                   <h2 className="font-syne font-bold text-lg text-ink">
-                    {alert.zone}
+                    {alert.zone_name}
                   </h2>
                   <time className="font-mono text-xs text-dim whitespace-nowrap">
-                    {alert.time} IST
+                    {alert.time}
                   </time>
                 </div>
 
                 <p className="font-condensed text-sm leading-relaxed text-ink mb-3 max-w-3xl">
-                  {alert.msg}
+                  {alert.message}
                 </p>
 
-                <div className="flex items-center gap-6 mb-4">
-                  <div>
-                    <span className="font-condensed text-xs text-dim uppercase tracking-wider block">Pressure</span>
-                    <span className="font-mono text-sm font-bold" style={{ color }}>{alert.pres} BAR</span>
-                  </div>
-                  <div>
-                    <span className="font-condensed text-xs text-dim uppercase tracking-wider block">AI Confidence</span>
-                    <span className="font-mono text-sm text-ink">{alert.ai}</span>
-                  </div>
-                </div>
-
                 <div className="flex items-center gap-3">
-                  {!isResolved && (
-                    <button className="px-4 py-2 bg-ink text-paper font-condensed text-sm font-semibold uppercase tracking-wider hover:opacity-90 transition-opacity">
-                      Acknowledge
-                    </button>
-                  )}
-                  <button className="px-4 py-2 border-2 border-rule text-ink font-condensed text-sm font-semibold uppercase tracking-wider hover:bg-ink hover:text-paper transition-colors">
-                    View Zone
+                  <button
+                    onClick={() => handleAcknowledge(alert)}
+                    className="px-4 py-2 bg-ink text-paper font-condensed text-sm font-semibold uppercase tracking-wider hover:opacity-90 transition-opacity"
+                  >
+                    Acknowledge
                   </button>
+                  <Link
+                    to={`/zones/${alert.zone_id}`}
+                    className="px-4 py-2 border-2 border-rule text-ink font-condensed text-sm font-semibold uppercase tracking-wider hover:bg-ink hover:text-paper transition-colors"
+                  >
+                    View Zone
+                  </Link>
                 </div>
               </div>
             </article>
@@ -128,7 +162,11 @@ export default function Alerts() {
 
       {filtered.length === 0 && (
         <div className="px-8 py-16 text-center">
-          <p className="font-condensed text-dim text-lg">No alerts in this category.</p>
+          <p className="font-condensed text-dim text-lg">
+            {filter === 'RESOLVED'
+              ? 'No resolved alerts. The API only returns unresolved alerts.'
+              : 'No alerts in this category.'}
+          </p>
         </div>
       )}
     </div>

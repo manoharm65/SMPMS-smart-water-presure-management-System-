@@ -1,0 +1,75 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "V-001",
+        "name": "Valve 1",
+        "zoneId": "DMA-01",
+        "diameter": 150,
+        "status": "open"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [77.585, 13.045]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "V-002",
+        "name": "Valve 2",
+        "zoneId": "DMA-02",
+        "diameter": 100,
+        "status": "open"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [77.615, 12.905]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "V-003",
+        "name": "Valve 3",
+        "zoneId": "DMA-03",
+        "diameter": 200,
+        "status": "closed"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [77.715, 12.925]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "V-004",
+        "name": "Valve 4",
+        "zoneId": "DMA-04",
+        "diameter": 150,
+        "status": "open"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [77.515, 12.965]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "V-005",
+        "name": "Valve 5",
+        "zoneId": "DMA-05",
+        "diameter": 250,
+        "status": "open"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [77.585, 12.975]
+      }
+    }
+  ]
+}
