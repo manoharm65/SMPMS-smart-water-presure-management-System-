@@ -17,6 +17,7 @@ import alertRouter from './modules/alert/alert.controller.js';
 import commandRouter from './modules/command/command.controller.js';
 import healthRouter from './modules/health/health.controller.js';
 import dashboardRouter from './modules/dashboard/dashboard.controller.js';
+import espRouter from './modules/esp/esp.controller.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -57,6 +58,7 @@ async function bootstrap() {
   app.use('/api/v1/alerts', alertRouter);
   app.use('/api/v1/commands', commandRouter);
   app.use('/api/v1/dashboard', dashboardRouter);
+  app.use('/api/v1/esp', espRouter);
 
   // Legacy /telemetry route (for ESP32 compatibility)
   app.use('/telemetry', telemetryRouter);

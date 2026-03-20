@@ -39,6 +39,10 @@ export interface Decision {
   riskLevel: string;
   action: string;
   requiresAlert: boolean;
+  confidence: number;
+  reason: string;
+  recommendedValvePosition: number;
+  alertSeverity: string;
   engine: string;
   createdAt: string;
 }

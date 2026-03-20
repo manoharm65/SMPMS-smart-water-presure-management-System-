@@ -16,7 +16,12 @@ export interface AppConfig {
   telegramChatId: string;
   pressureMin: number;
   pressureMax: number;
+  telemetryIntervalMs: number;
   sqliteDbPath: string;
+  pressureCriticalHigh: number;
+  pressureWarningHigh: number;
+  pressureNormalLow: number;
+  pressureCriticalLow: number;
 }
 
 export function getConfig(): AppConfig {
@@ -28,6 +33,11 @@ export function getConfig(): AppConfig {
   const pressureMin = parseFloat(process.env.PRESSURE_MIN_THRESHOLD || '2.0');
   const pressureMax = parseFloat(process.env.PRESSURE_MAX_THRESHOLD || '6.0');
   const sqliteDbPath = process.env.SQLITE_DB_PATH || './data/smpms.db';
+  const telemetryIntervalMs = parseInt(process.env.TELEMETRY_INTERVAL_MS || '10000', 10);
+  const pressureCriticalHigh = parseFloat(process.env.PRESSURE_CRITICAL_HIGH || '5.5');
+  const pressureWarningHigh = parseFloat(process.env.PRESSURE_WARNING_HIGH || '4.5');
+  const pressureNormalLow = parseFloat(process.env.PRESSURE_NORMAL_LOW || '2.5');
+  const pressureCriticalLow = parseFloat(process.env.PRESSURE_CRITICAL_LOW || '1.5');
 
   return {
     port,
@@ -37,7 +47,12 @@ export function getConfig(): AppConfig {
     telegramChatId,
     pressureMin,
     pressureMax,
+    telemetryIntervalMs,
     sqliteDbPath,
+    pressureCriticalHigh,
+    pressureWarningHigh,
+    pressureNormalLow,
+    pressureCriticalLow,
   };
 }
 

@@ -15,6 +15,10 @@ export class DecisionRepository {
       riskLevel: row.risk_level,
       action: row.action,
       requiresAlert: row.requires_alert === 1,
+      confidence: row.confidence ?? 0.5,
+      reason: row.reason ?? '',
+      recommendedValvePosition: row.recommended_valve_position ?? 0,
+      alertSeverity: row.alert_severity ?? 'ok',
       engine: row.engine,
       createdAt: row.created_at,
     };
@@ -26,14 +30,19 @@ export class DecisionRepository {
     riskLevel: string;
     action: string;
     requiresAlert: boolean;
+    confidence: number;
+    reason: string;
+    recommendedValvePosition: number;
+    alertSeverity: string;
     engine?: string;
   }): Decision {
     const db = getDatabase();
     const id = uuidv4();
     const now = new Date().toISOString();
     db.run(
-      'INSERT INTO decisions (id, node_id, telemetry_id, risk_level, action, requires_alert, engine, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, data.nodeId, data.telemetryId ?? null, data.riskLevel, data.action, data.requiresAlert ? 1 : 0, data.engine ?? 'rule', now]
+      `INSERT INTO decisions (id, node_id, telemetry_id, risk_level, action, requires_alert, confidence, reason, recommended_valve_position, alert_severity, engine, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, data.nodeId, data.telemetryId ?? null, data.riskLevel, data.action, data.requiresAlert ? 1 : 0, data.confidence, data.reason, data.recommendedValvePosition, data.alertSeverity, data.engine ?? 'rule', now]
     );
     return this.findById(id)!;
   }

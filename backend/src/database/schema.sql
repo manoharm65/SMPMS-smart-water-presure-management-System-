@@ -45,6 +45,11 @@ CREATE TABLE IF NOT EXISTS decisions (
   FOREIGN KEY (node_id) REFERENCES nodes(node_id)
 );
 
+ALTER TABLE decisions ADD COLUMN confidence REAL DEFAULT 0.5;
+ALTER TABLE decisions ADD COLUMN reason TEXT DEFAULT '';
+ALTER TABLE decisions ADD COLUMN recommended_valve_position INTEGER DEFAULT 0;
+ALTER TABLE decisions ADD COLUMN alert_severity TEXT DEFAULT 'ok';
+
 CREATE TABLE IF NOT EXISTS alerts (
   id TEXT PRIMARY KEY,
   node_id TEXT NOT NULL,

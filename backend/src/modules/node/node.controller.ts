@@ -1,8 +1,26 @@
 import { Router, Request, Response } from 'express';
 import { nodeService } from './node.service.js';
 import { authMiddleware, AuthenticatedRequest } from '../auth/auth.middleware.js';
+import { validateDto } from '../../utils/validators.js';
+import { RegisterEspDto } from '../esp/dto/register-esp.dto.js';
 
 const router = Router();
+
+// POST /nodes/register — ESP32 boot registration (no auth)
+router.post('/register', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const dto = await validateDto(RegisterEspDto, req.body);
+    const result = nodeService.register(dto.nodeId, dto.firmwareVersion, dto.ipAddress);
+    res.json({
+      registered: true,
+      node_id: result.node.nodeId,
+      telemetry_interval_ms: result.telemetryIntervalMs,
+      pressure_thresholds: result.pressureThresholds,
+    });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
 // GET /nodes
 router.get('/', authMiddleware, (_req: AuthenticatedRequest, res: Response): void => {

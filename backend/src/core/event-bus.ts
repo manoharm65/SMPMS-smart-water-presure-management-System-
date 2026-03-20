@@ -64,6 +64,10 @@ export interface DecisionPayload {
   riskLevel: string;
   action: string;
   requiresAlert: boolean;
+  confidence: number;
+  reason: string;
+  recommendedValvePosition: number;
+  alertSeverity: string;
   telemetryId?: string;
   engine: string;
 }
