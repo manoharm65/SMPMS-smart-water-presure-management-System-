@@ -1,60 +1,46 @@
 import { NavLink } from 'react-router-dom'
 
 const navItems = [
-  { to: '/', label: 'Home' },
-  { to: '/map', label: 'Map' },
-  { to: '/overview', label: 'Overview' },
-  { to: '/alerts', label: 'Alerts' },
-  { to: '/analytics', label: 'Analytics' },
-  { to: '/about', label: 'About' },
+  { to: '/', label: 'HOME' },
+  { to: '/map', label: 'MAP VIEW' },
+  { to: '/overview', label: 'OVERVIEW' },
+  { to: '/zones/:zoneId', label: 'ZONE DETAIL' },
+  { to: '/alerts', label: 'ALERTS' },
+  { to: '/analytics', label: 'ANALYTICS' },
 ]
 
 export default function Sidebar() {
   return (
-    <aside className="flex w-56 flex-col border-r border-border bg-panel">
-      <div className="px-3 py-2 text-[11px] uppercase tracking-wider text-text-faint">
-        Control Center
+    <aside className="flex w-12 flex-col border-r-2 border-rule bg-ink h-full">
+      {/* Logo mark at top */}
+      <div className="flex justify-center pt-3 pb-4">
+        <div className="h-8 w-8 border-2 border-paper flex items-center justify-center">
+          <div className="h-2 w-2 bg-signal" />
+        </div>
       </div>
-      <nav className="flex flex-col gap-1 px-2 pb-2">
+
+      {/* Vertical navigation in the middle */}
+      <nav className="flex flex-col items-center gap-6 flex-1 py-4">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              [
-                'relative rounded px-2 py-2 text-sm',
-                'border border-transparent transition-colors',
+              `vert-text text-paper font-condensed text-[9px] tracking-[0.15em] no-underline transition-colors ${
                 isActive
-                  ? 'bg-bg text-text border-border shadow-[0_0_0_1px_rgba(0,200,150,0.10)]'
-                  : 'text-text-muted hover:bg-bg hover:text-text',
-              ].join(' ')
+                  ? 'bg-paper text-ink nav-active px-1 py-2'
+                  : 'hover:text-muted'
+              }`
             }
-            end={item.to === '/'}
           >
-            {({ isActive }) => (
-              <>
-                <span
-                  className={
-                    'absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded ' +
-                    (isActive
-                      ? 'bg-accent shadow-[0_0_14px_rgba(0,200,150,0.35)]'
-                      : 'bg-transparent')
-                  }
-                />
-                {item.label}
-              </>
-            )}
+            {item.label}
           </NavLink>
         ))}
       </nav>
 
-      <div className="mt-auto border-t border-border px-3 py-2">
-        <div className="text-[11px] uppercase tracking-wider text-text-faint">
-          System
-        </div>
-        <div className="mt-1 text-xs text-text-muted">
-          Pipeline pressure / valves / DMA zones
-        </div>
+      {/* User initials at bottom */}
+      <div className="flex justify-center pb-4 pt-4 border-t-2 border-rule">
+        <span className="font-mono text-paper text-[12px]">MB</span>
       </div>
     </aside>
   )

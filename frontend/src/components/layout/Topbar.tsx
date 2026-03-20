@@ -1,111 +1,80 @@
-import { NavLink, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../../store/authStore'
-import { useDashboardStore } from '../../store/dashboardStore'
+import { useState, useEffect } from 'react'
 
-const navItems = [
-  { to: '/', label: 'Home' },
-  { to: '/map', label: 'Map' },
-  { to: '/overview', label: 'Overview' },
-  { to: '/alerts', label: 'Alerts' },
-  { to: '/analytics', label: 'Analytics' },
-  { to: '/about', label: 'About' },
-]
+interface TopbarProps {
+  title?: string
+  onAlerts?: () => void
+}
 
-export default function Topbar() {
-  const connection = useDashboardStore((s) => s.connection)
-  const token = useAuthStore((s) => s.token)
-  const user = useAuthStore((s) => s.user)
-  const logout = useAuthStore((s) => s.logout)
-  const navigate = useNavigate()
+function useClock() {
+  const [time, setTime] = useState<Date>(new Date())
+
+  useEffect(() => {
+    // Update every second
+    const interval = setInterval(() => {
+      // Convert to IST (UTC+5:30)
+      const now = new Date()
+      const istOffset = 5.5 * 60 * 60 * 1000 // 5 hours 30 minutes in ms
+      const istTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + istOffset)
+      setTime(istTime)
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  return time
+}
+
+export default function Topbar({ title, onAlerts }: TopbarProps) {
+  const clockTime = useClock()
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    })
+  }
 
   return (
-    <header className="relative flex h-12 items-center justify-between border-b border-border bg-bg px-3">
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-accent to-transparent opacity-55" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-info to-transparent opacity-35" />
-
-      <div className="flex items-baseline gap-3">
-        <div className="text-sm font-semibold tracking-wide text-text">AquaBytes</div>
-        <div className="hidden text-[11px] uppercase tracking-wider text-text-muted sm:block">
-          Solapur Water Network
-        </div>
+    <header className="flex h-11 items-center justify-between border-b-2 border-rule bg-paper px-4">
+      {/* Left section - Brand */}
+      <div className="flex items-baseline gap-3 border-r-2 border-rule pr-4">
+        <span className="font-syne font-extrabold text-[13px] tracking-wide text-ink">
+          AQUABYTES
+        </span>
+        <span className="font-condensed text-[11px] text-dim hidden sm:block">
+          Solapur Municipal Corporation
+        </span>
       </div>
 
-      {/* Sidebar replacement: compact nav "box" */}
-      <nav className="mx-3 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded border border-border bg-panel/80 px-2 py-1">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            className={({ isActive }) =>
-              [
-                'shrink-0 rounded px-2 py-1 text-xs font-semibold tracking-wide transition-colors',
-                isActive
-                  ? 'bg-bg text-text shadow-[0_0_0_1px_rgba(0,200,150,0.12)]'
-                  : 'text-text-muted hover:bg-bg hover:text-text',
-              ].join(' ')
-            }
-          >
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
-
-      <div className="flex items-center gap-3 text-xs">
-        <div
-          className={
-            'flex items-center gap-2 rounded border px-2 py-1 ' +
-            (connection.status === 'connected'
-              ? 'border-[rgba(0,200,150,0.35)] bg-[rgba(0,200,150,0.08)]'
-              : connection.status === 'connecting'
-                ? 'border-[rgba(245,166,35,0.35)] bg-[rgba(245,166,35,0.08)]'
-                : 'border-[rgba(240,77,77,0.35)] bg-[rgba(240,77,77,0.08)]')
-          }
-        >
-          <span
-            className={
-              'h-2 w-2 rounded-full shadow-[0_0_12px_rgba(0,0,0,0.35)] ' +
-              (connection.status === 'connected'
-                ? 'bg-accent shadow-[0_0_12px_rgba(0,200,150,0.40)]'
-                : connection.status === 'connecting'
-                  ? 'bg-warning shadow-[0_0_12px_rgba(245,166,35,0.35)]'
-                  : 'bg-critical shadow-[0_0_12px_rgba(240,77,77,0.35)]')
-            }
-          />
-          <span className="font-mono text-[12px] tracking-wide text-text">
-            {connection.status === 'connected'
-              ? 'LIVE'
-              : connection.status === 'connecting'
-                ? 'CONNECTING'
-                : 'OFFLINE'}
+      {/* Center section - Breadcrumb/Title */}
+      <div className="flex-1 flex justify-center border-r-2 border-rule px-4">
+        {title && (
+          <span className="font-syne font-extrabold text-[10px] tracking-[0.12em] text-ink uppercase">
+            {title}
           </span>
-        </div>
-
-        <div className="hidden font-mono text-text-faint sm:block">
-          {connection.lastMessageAt
-            ? new Date(connection.lastMessageAt).toLocaleTimeString()
-            : '--:--:--'}
-        </div>
-
-        {!token ? (
-          <button
-            className="rounded border border-border bg-panel px-2 py-1 text-xs font-semibold text-text hover:bg-bg"
-            onClick={() => navigate('/login')}
-          >
-            Login
-          </button>
-        ) : (
-          <button
-            className="rounded border border-border bg-panel px-2 py-1 text-xs font-semibold text-text hover:bg-bg"
-            onClick={() => {
-              logout()
-              navigate('/', { replace: true })
-            }}
-            title={user?.username ?? 'Signed in'}
-          >
-            Logout
-          </button>
         )}
+      </div>
+
+      {/* Right section - Clock and Alerts */}
+      <div className="flex items-center gap-4 pl-4">
+        {/* Clock */}
+        <div className="font-mono text-[11px] text-ink">
+          {formatTime(clockTime)}
+        </div>
+
+        {/* Alert button */}
+        <button
+          type="button"
+          onClick={onAlerts}
+          className="flex items-center gap-2 font-condensed text-[10px] tracking-[0.1em] text-ink hover:text-signal transition-colors"
+        >
+          <span className="relative flex items-center justify-center">
+            <span className="h-2 w-2 bg-signal rounded-full blink" />
+          </span>
+          <span className="hidden sm:inline">3 ACTIVE ALERTS</span>
+        </button>
       </div>
     </header>
   )

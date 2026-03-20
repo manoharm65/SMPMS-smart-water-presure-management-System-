@@ -10,133 +10,140 @@ body,
 
 body {
   margin: 0;
-  background: #080d14;
-  color: rgba(255, 255, 255, 0.86);
-  font-family: 'IBM Plex Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
+  background: #F5F0E8;
+  color: #0A0A0A;
+  font-family: 'Barlow Condensed', sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Subtle “water/SCADA ambience” using existing palette (accent/info) */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(900px 500px at 18% 22%, rgba(0, 200, 150, 0.10), transparent 60%),
-    radial-gradient(700px 450px at 78% 72%, rgba(74, 159, 245, 0.10), transparent 60%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%);
-  opacity: 0.9;
+/* Vertical text for sidebar */
+.vert-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
 }
 
-/* Subtle SCADA-style scrollbars */
+/* Ticker blink animation */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.blink {
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+/* Scan line on critical */
+@keyframes scan {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(400%); }
+}
+.scan-line {
+  animation: scan 2s linear infinite;
+}
+
+/* Pulse ring */
+@keyframes pring {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.pulse-ring {
+  animation: pring 1.5s ease-out infinite;
+}
+.pulse-ring-2 {
+  animation: pring 1.5s ease-out infinite 0.5s;
+}
+
+/* Custom scrollbar — editorial thin style */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 200, 150, 0.35) rgba(255, 255, 255, 0.05);
+  scrollbar-color: #1A1A1A transparent;
 }
 
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-*::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  width: 4px;
+  height: 4px;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(0, 200, 150, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 9999px;
+  background: #1A1A1A;
 }
 
-*::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 200, 150, 0.35);
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-/* Reduce default focus noise; rely on ring utilities. */
+/* Table row hover — invert to black */
+.table-row:hover {
+  background: #0A0A0A;
+  color: #F5F0E8;
+}
+
+.table-row:hover .row-badge {
+  filter: invert(1);
+}
+
+/* Nav active indicator */
+.nav-active {
+  border-left: 3px solid #E8001D;
+}
+
+/* Display number — tabular nums */
+.display-number {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
+/* Valve node hover */
+.valve-node {
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.valve-node:hover {
+  transform: scale(1.15);
+}
+
+/* Input range editorial style */
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 2px;
+  background: #1A1A1A;
+  outline: none;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #E8001D;
+  border: 2px solid #0A0A0A;
+  border-radius: 0;
+}
+
+/* Chart canvas */
+canvas {
+  display: block;
+}
+
+/* Leaflet container — dark for map panel */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: #0A0A0A;
+}
+
+/* Focus states */
 *:focus {
   outline: none;
 }
 
-/* Leaflet container needs explicit height. */
-.leaflet-container {
-  height: 100%;
-  width: 100%;
-  background: #080d14;
-}
-
-/* Leaflet tooltip/popup theming to match SCADA panels */
-.leaflet-tooltip {
-  background: rgba(11, 19, 32, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  color: rgba(255, 255, 255, 0.86);
-  box-shadow:
-    0 0 0 1px rgba(0, 200, 150, 0.12),
-    0 10px 20px rgba(0, 0, 0, 0.35);
-}
-
-.leaflet-tooltip-left:before {
-  border-left-color: rgba(255, 255, 255, 0.10);
-}
-
-.leaflet-tooltip-right:before {
-  border-right-color: rgba(255, 255, 255, 0.10);
-}
-
-.leaflet-tooltip-top:before {
-  border-top-color: rgba(255, 255, 255, 0.10);
-}
-
-.leaflet-tooltip-bottom:before {
-  border-bottom-color: rgba(255, 255, 255, 0.10);
-}
-
-/* Animated leak indicator (used via Leaflet DivIcon). */
-.leak-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 9999px;
-  background: #f04d4d;
-  box-shadow: 0 0 0 1px rgba(240, 77, 77, 0.35);
-  position: relative;
-}
-
-.leak-indicator {
-  animation: leakFlicker 2.2s ease-in-out infinite;
-}
-
-.leak-indicator::after {
-  content: '';
-  position: absolute;
-  inset: -8px;
-  border-radius: 9999px;
-  border: 1px solid rgba(240, 77, 77, 0.6);
-  animation: leakPulse 1.4s ease-out infinite;
-}
-
-@keyframes leakPulse {
-  0% {
-    transform: scale(0.25);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0;
-  }
-}
-
-@keyframes leakFlicker {
-  0% {
-    filter: saturate(1);
-  }
-  50% {
-    filter: saturate(1.35);
-  }
-  100% {
-    filter: saturate(1);
-  }
+/* Selection color */
+::selection {
+  background: #E8001D;
+  color: #F5F0E8;
 }
