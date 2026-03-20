@@ -1,17 +1,29 @@
-import { eventBus, TelemetryPayload } from '../../core/event-bus.js';
+import { eventBus, TelemetryPayload, CommandAckPayload } from '../../core/event-bus.js';
 import { telemetryRepository } from '../../repositories/telemetry.repository.js';
 import { nodeRepository } from '../../repositories/node.repository.js';
 import { commandRepository } from '../../repositories/command.repository.js';
 import { CreateTelemetryDto } from './dto/create-telemetry.dto.js';
-import { Telemetry } from '../../types/index.js';
+import { Telemetry, Command } from '../../types/index.js';
 import { config } from '../../core/config.js';
 
 export class TelemetryService {
-  async create(dto: CreateTelemetryDto): Promise<Telemetry> {
+  async create(dto: CreateTelemetryDto): Promise<{ telemetry: Telemetry; command?: Command }> {
     // Check if node exists
     const node = nodeRepository.findByNodeId(dto.nodeId);
     if (!node) {
       throw new Error(`Node ${dto.nodeId} not found`);
+    }
+
+    // Handle ACK from ESP if included in payload
+    if (dto.ack) {
+      const ackPayload: CommandAckPayload = {
+        nodeId: dto.nodeId,
+        commandId: dto.ack.commandId,
+        executed: dto.ack.executed === 1,
+        actualPosition: dto.ack.actualPosition,
+        timestamp: new Date(),
+      };
+      eventBus.emitCommandAckReceived(ackPayload);
     }
 
     // Store telemetry
@@ -25,7 +37,7 @@ export class TelemetryService {
 
     console.log(`[Telemetry] Received: node=${dto.nodeId}, pressure=${dto.pressure}`);
 
-    // Emit telemetry received event
+    // Emit telemetry received event (triggers decision engine)
     const payload: TelemetryPayload = {
       nodeId: dto.nodeId,
       pressure: dto.pressure,
@@ -38,7 +50,15 @@ export class TelemetryService {
 
     eventBus.emitTelemetryReceived(payload);
 
-    return telemetry;
+    // Check for pending command to dispatch to ESP
+    const pendingCommand = commandRepository.findOldestPendingByNodeId(dto.nodeId);
+    let commandToDispatch: Command | undefined;
+    if (pendingCommand) {
+      commandRepository.updateStatus(pendingCommand.id, 'DISPATCHED');
+      commandToDispatch = pendingCommand;
+    }
+
+    return { telemetry, command: commandToDispatch };
   }
 
   async createForEsp(dto: { nodeId: string; pressure: number; valvePosition: number; timestamp: string }): Promise<{

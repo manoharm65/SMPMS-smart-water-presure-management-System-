@@ -10,8 +10,19 @@ const router = Router();
 router.post('/', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const dto = await validateDto(CreateTelemetryDto, req.body);
-    const telemetry = await telemetryService.create(dto);
-    res.status(201).json(telemetry);
+    const result = await telemetryService.create(dto);
+
+    // Include pending command in response for ESP to execute
+    const response: any = { ...result.telemetry };
+    if (result.command) {
+      response.command = {
+        command_id: result.command.id,
+        type: 'SET_VALVE',
+        value: result.command.targetPosition ?? 0,
+      };
+    }
+
+    res.status(201).json(response);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }

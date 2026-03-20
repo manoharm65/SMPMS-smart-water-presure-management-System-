@@ -110,12 +110,14 @@ async function bootstrap() {
   // Graceful shutdown
   process.on('SIGINT', () => {
     console.log('\n🛑 Shutting down...');
+    commandService.shutdown();
     closeDatabase();
     process.exit(0);
   });
 
   process.on('SIGTERM', () => {
     console.log('\n🛑 Shutting down...');
+    commandService.shutdown();
     closeDatabase();
     process.exit(0);
   });

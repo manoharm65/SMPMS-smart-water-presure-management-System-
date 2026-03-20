@@ -1,4 +1,17 @@
-import { IsString, IsNumber, IsOptional, Min } from 'class-validator';
+import { IsString, IsNumber, IsOptional, Min, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class CommandAckDto {
+  @IsString()
+  commandId!: string;
+
+  @IsNumber()
+  executed!: number;  // 1 = true, 0 = false
+
+  @IsNumber()
+  @IsOptional()
+  actualPosition?: number;
+}
 
 export class CreateTelemetryDto {
   @IsString()
@@ -20,4 +33,9 @@ export class CreateTelemetryDto {
   @IsOptional()
   @Min(0)
   batteryLevel?: number;
+
+  @ValidateNested()
+  @Type(() => CommandAckDto)
+  @IsOptional()
+  ack?: CommandAckDto;
 }
