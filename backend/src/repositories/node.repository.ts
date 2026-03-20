@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../database/db.js';
-import { Node } from '../types/index.js';
+import { Node, ValveState, ValveMode } from '../types/index.js';
 
 export class NodeRepository {
   private mapRow(columns: string[], values: any[]): Node {
@@ -15,7 +15,11 @@ export class NodeRepository {
       location: row.location,
       isActive: row.is_active === 1,
       valvePosition: row.valve_position ?? 50,
-      valveMode: (row.valve_mode as 'auto' | 'override') ?? 'auto',
+      valveMode: (row.valve_mode as ValveMode) ?? 'auto',
+      currentPosition: row.current_position ?? row.valve_position ?? 50,
+      targetPosition: row.target_position ?? 0,
+      lastCommandId: row.last_command_id ?? undefined,
+      lastValveUpdate: row.last_valve_update ?? undefined,
       status: row.status as 'online' | 'offline' | 'degraded' | undefined,
       lastSeen: row.last_seen ?? undefined,
       apiKey: row.api_key ?? undefined,
@@ -100,6 +104,77 @@ export class NodeRepository {
     const db = getDatabase();
     const now = new Date().toISOString();
     db.run('UPDATE nodes SET api_key = ?, updated_at = ? WHERE node_id = ?', [apiKey, now, nodeId]);
+  }
+
+  checkNodeStatus(nodeId: string, telemetryIntervalMs: number): 'online' | 'offline' {
+    const db = getDatabase();
+    const result = db.exec('SELECT last_seen FROM nodes WHERE node_id = ?', [nodeId]);
+    if (result.length === 0 || result[0].values.length === 0) return 'offline';
+
+    const lastSeen = result[0].values[0][0] as string | null;
+    if (!lastSeen) return 'offline';
+
+    const lastSeenTime = new Date(lastSeen).getTime();
+    const now = Date.now();
+    const threshold = telemetryIntervalMs * 2;
+
+    if (now - lastSeenTime > threshold) {
+      // Mark as offline
+      const nowStr = new Date().toISOString();
+      db.run('UPDATE nodes SET status = ?, updated_at = ? WHERE node_id = ?', ['offline', nowStr, nodeId]);
+      return 'offline';
+    }
+    return 'online';
+  }
+
+  getValveState(nodeId: string): ValveState | null {
+    const node = this.findByNodeId(nodeId);
+    if (!node) return null;
+    return {
+      nodeId: node.nodeId,
+      currentPosition: node.currentPosition ?? node.valvePosition ?? 50,
+      targetPosition: node.targetPosition ?? 0,
+      mode: node.valveMode ?? 'auto',
+      lastCommandId: node.lastCommandId,
+      lastUpdated: node.lastValveUpdate,
+    };
+  }
+
+  updateValveState(nodeId: string, updates: {
+    currentPosition?: number;
+    targetPosition?: number;
+    mode?: ValveMode;
+    lastCommandId?: string;
+  }): void {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    const sets: string[] = ['last_valve_update = ?'];
+    const values: any[] = [now];
+
+    if (updates.currentPosition !== undefined) {
+      sets.push('current_position = ?');
+      values.push(updates.currentPosition);
+    }
+    if (updates.targetPosition !== undefined) {
+      sets.push('target_position = ?');
+      values.push(updates.targetPosition);
+    }
+    if (updates.mode !== undefined) {
+      sets.push('valve_mode = ?');
+      values.push(updates.mode);
+    }
+    if (updates.lastCommandId !== undefined) {
+      sets.push('last_command_id = ?');
+      values.push(updates.lastCommandId);
+    }
+
+    values.push(nodeId);
+    db.run(`UPDATE nodes SET ${sets.join(', ')} WHERE node_id = ?`, values);
+  }
+
+  updateValveMode(nodeId: string, mode: ValveMode): void {
+    this.updateValveState(nodeId, { mode });
   }
 }
 

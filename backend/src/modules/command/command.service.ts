@@ -52,6 +52,15 @@ export class CommandService {
   updateStatus(id: string, status: string): void {
     commandRepository.updateStatus(id, status);
   }
+
+  acknowledge(commandId: string, nodeId: string, executed: boolean, actualPosition: number, _timestamp: string): void {
+    const command = commandRepository.findByIdAndNodeId(commandId, nodeId);
+    if (!command) {
+      throw new Error(`Command ${commandId} not found for node ${nodeId}`);
+    }
+    commandRepository.updateStatus(commandId, executed ? 'EXECUTED' : 'FAILED', executed ? actualPosition : undefined);
+    console.log(`[Command] Ack: id=${commandId}, executed=${executed}, actualPosition=${actualPosition}`);
+  }
 }
 
 export const commandService = new CommandService();

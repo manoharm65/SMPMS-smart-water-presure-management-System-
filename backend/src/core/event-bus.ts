@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { EVENTS, EventType } from './constants.js';
+import { EVENTS, EventType, ValveMode } from './constants.js';
 
 class EventBus extends EventEmitter {
   private static instance: EventBus;
@@ -47,6 +47,30 @@ class EventBus extends EventEmitter {
   onActionDispatched(handler: (payload: ActionPayload) => void): void {
     this.on(EVENTS.ACTION_DISPATCHED, handler);
   }
+
+  emitValveModeChanged(payload: ValveModePayload): void {
+    this.emit(EVENTS.VALVE_MODE_CHANGED, payload);
+  }
+
+  onValveModeChanged(handler: (payload: ValveModePayload) => void): void {
+    this.on(EVENTS.VALVE_MODE_CHANGED, handler);
+  }
+
+  emitCommandTimeout(payload: CommandTimeoutPayload): void {
+    this.emit(EVENTS.COMMAND_TIMEOUT, payload);
+  }
+
+  onCommandTimeout(handler: (payload: CommandTimeoutPayload) => void): void {
+    this.on(EVENTS.COMMAND_TIMEOUT, handler);
+  }
+
+  emitCommandAckReceived(payload: CommandAckPayload): void {
+    this.emit(EVENTS.COMMAND_ACK_RECEIVED, payload);
+  }
+
+  onCommandAckReceived(handler: (payload: CommandAckPayload) => void): void {
+    this.on(EVENTS.COMMAND_ACK_RECEIVED, handler);
+  }
 }
 
 export interface TelemetryPayload {
@@ -83,6 +107,32 @@ export interface ActionPayload {
   nodeId: string;
   command: string;
   commandId?: string;
+  riskLevel?: string;
+  targetPosition?: number;
+  pressure?: number;
+}
+
+export interface ValveModePayload {
+  nodeId: string;
+  previousMode: ValveMode;
+  newMode: ValveMode;
+  reason: 'operator' | 'critical_auto_revert';
+  pressure?: number;
+}
+
+export interface CommandAckPayload {
+  nodeId: string;
+  commandId: string;
+  executed: boolean;
+  actualPosition?: number;
+  timestamp: Date;
+}
+
+export interface CommandTimeoutPayload {
+  nodeId: string;
+  commandId: string;
+  commandAgeMs: number;
+  thresholdMs: number;
 }
 
 export const eventBus = EventBus.getInstance();

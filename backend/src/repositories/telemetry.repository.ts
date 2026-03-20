@@ -15,6 +15,7 @@ export class TelemetryRepository {
       flowRate: row.flow_rate,
       temperature: row.temperature,
       batteryLevel: row.battery_level,
+      valvePosition: row.valve_position,
       timestamp: row.timestamp,
     };
   }
@@ -25,15 +26,31 @@ export class TelemetryRepository {
     flowRate?: number;
     temperature?: number;
     batteryLevel?: number;
+    valvePosition?: number;
+    timestamp?: string;
   }): Telemetry {
     const db = getDatabase();
     const id = uuidv4();
-    const timestamp = new Date().toISOString();
+    const ts = data.timestamp ?? new Date().toISOString();
     db.run(
-      'INSERT INTO telemetry (id, node_id, pressure, flow_rate, temperature, battery_level, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id, data.nodeId, data.pressure, data.flowRate ?? null, data.temperature ?? null, data.batteryLevel ?? null, timestamp]
+      'INSERT INTO telemetry (id, node_id, pressure, flow_rate, temperature, battery_level, valve_position, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, data.nodeId, data.pressure, data.flowRate ?? null, data.temperature ?? null, data.batteryLevel ?? null, data.valvePosition ?? null, ts]
     );
     return this.findById(id)!;
+  }
+
+  createBulk(readings: { nodeId: string; pressure: number; valvePosition?: number; timestamp: string }[]): number {
+    const db = getDatabase();
+    let count = 0;
+    for (const r of readings) {
+      const id = uuidv4();
+      db.run(
+        'INSERT INTO telemetry (id, node_id, pressure, valve_position, timestamp) VALUES (?, ?, ?, ?, ?)',
+        [id, r.nodeId, r.pressure, r.valvePosition ?? null, r.timestamp]
+      );
+      count++;
+    }
+    return count;
   }
 
   findById(id: string): Telemetry | null {

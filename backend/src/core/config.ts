@@ -22,6 +22,8 @@ export interface AppConfig {
   pressureWarningHigh: number;
   pressureNormalLow: number;
   pressureCriticalLow: number;
+  commandTimeoutCycles: number;
+  commandTimeoutCheckMs: number;
 }
 
 export function getConfig(): AppConfig {
@@ -38,6 +40,8 @@ export function getConfig(): AppConfig {
   const pressureWarningHigh = parseFloat(process.env.PRESSURE_WARNING_HIGH || '4.5');
   const pressureNormalLow = parseFloat(process.env.PRESSURE_NORMAL_LOW || '2.5');
   const pressureCriticalLow = parseFloat(process.env.PRESSURE_CRITICAL_LOW || '1.5');
+  const commandTimeoutCycles = parseInt(process.env.COMMAND_TIMEOUT_CYCLES || '3', 10);
+  const commandTimeoutCheckMs = parseInt(process.env.COMMAND_TIMEOUT_CHECK_MS || '30000', 10);
 
   return {
     port,
@@ -53,6 +57,8 @@ export function getConfig(): AppConfig {
     pressureWarningHigh,
     pressureNormalLow,
     pressureCriticalLow,
+    commandTimeoutCycles,
+    commandTimeoutCheckMs,
   };
 }
 

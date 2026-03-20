@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS nodes (
   is_active INTEGER DEFAULT 1,
   valve_position INTEGER DEFAULT 50,
   valve_mode TEXT DEFAULT 'auto',
+  target_position REAL DEFAULT 0,
+  last_command_id TEXT,
+  last_valve_update TEXT,
   status TEXT DEFAULT 'offline',
   last_seen TEXT,
   api_key TEXT,
@@ -29,6 +32,7 @@ CREATE TABLE IF NOT EXISTS telemetry (
   flow_rate REAL,
   temperature REAL,
   battery_level REAL,
+  valve_position INTEGER,
   timestamp TEXT DEFAULT (datetime('now')),
   FOREIGN KEY (node_id) REFERENCES nodes(node_id)
 );
@@ -66,6 +70,9 @@ CREATE TABLE IF NOT EXISTS commands (
   node_id TEXT NOT NULL,
   command TEXT NOT NULL,
   status TEXT DEFAULT 'pending',
+  priority TEXT DEFAULT 'normal',
+  target_position INTEGER,
+  executed_position INTEGER,
   sent_at TEXT,
   acknowledged_at TEXT,
   created_at TEXT DEFAULT (datetime('now')),

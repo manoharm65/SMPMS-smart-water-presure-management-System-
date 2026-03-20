@@ -3,6 +3,9 @@ export const EVENTS = {
   DECISION_MADE: 'decision:made',
   ALERT_TRIGGERED: 'alert:triggered',
   ACTION_DISPATCHED: 'action:dispatched',
+  VALVE_MODE_CHANGED: 'valve:mode-changed',
+  COMMAND_TIMEOUT: 'command:timeout',
+  COMMAND_ACK_RECEIVED: 'command:ack-received',
 } as const;
 
 export type EventType = (typeof EVENTS)[keyof typeof EVENTS];
@@ -34,11 +37,31 @@ export const ALERT_SEVERITIES = {
 
 export type AlertSeverity = (typeof ALERT_SEVERITIES)[keyof typeof ALERT_SEVERITIES];
 
+// Command lifecycle: PENDING -> DISPATCHED -> EXECUTED | FAILED | TIMEOUT
 export const COMMAND_STATUS = {
-  PENDING: 'pending',
-  SENT: 'sent',
-  ACKNOWLEDGED: 'acknowledged',
-  FAILED: 'failed',
+  PENDING: 'PENDING',
+  DISPATCHED: 'DISPATCHED',
+  EXECUTED: 'EXECUTED',
+  FAILED: 'FAILED',
+  TIMEOUT: 'TIMEOUT',
 } as const;
 
 export type CommandStatus = (typeof COMMAND_STATUS)[keyof typeof COMMAND_STATUS];
+
+// Command priority: critical > warning > normal > manual
+export const COMMAND_PRIORITY = {
+  CRITICAL: 'critical',
+  WARNING: 'warning',
+  NORMAL: 'normal',
+  MANUAL: 'manual',
+} as const;
+
+export type CommandPriority = (typeof COMMAND_PRIORITY)[keyof typeof COMMAND_PRIORITY];
+
+// Valve operating modes
+export const VALVE_MODE = {
+  AUTO: 'auto',
+  OVERRIDE: 'override',
+} as const;
+
+export type ValveMode = (typeof VALVE_MODE)[keyof typeof VALVE_MODE];

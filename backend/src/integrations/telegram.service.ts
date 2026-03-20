@@ -55,6 +55,102 @@ export class TelegramService {
       return false;
     }
   }
+
+  async sendCriticalCommandNotification(payload: {
+    nodeId: string;
+    command: string;
+    targetPosition: number;
+    pressure: number;
+  }): Promise<boolean> {
+    const telegramBot = getBot();
+
+    if (!telegramBot) {
+      console.log('[Telegram] Bot not configured. Skipping critical command notification.');
+      return false;
+    }
+
+    const message = `🔴 *CRITICAL: Valve command sent to ${payload.nodeId}*\n\nAction: ${payload.command} → target ${payload.targetPosition}%\nPressure: ${payload.pressure} BAR\n\nTime: ${new Date().toISOString()}`;
+
+    try {
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'Markdown' });
+      console.log(`[Telegram] Critical command notification sent for node ${payload.nodeId}`);
+      return true;
+    } catch (err) {
+      console.error('[Telegram] Failed to send critical command notification:', err);
+      return false;
+    }
+  }
+
+  async sendTimeoutNotification(payload: {
+    nodeId: string;
+    commandId: string;
+  }): Promise<boolean> {
+    const telegramBot = getBot();
+
+    if (!telegramBot) {
+      console.log('[Telegram] Bot not configured. Skipping timeout notification.');
+      return false;
+    }
+
+    const message = `⚠️ *WARNING: Valve command timeout — ${payload.nodeId} not responding*\n\nCommand ID: ${payload.commandId}\nTime: ${new Date().toISOString()}`;
+
+    try {
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'Markdown' });
+      console.log(`[Telegram] Timeout notification sent for node ${payload.nodeId}`);
+      return true;
+    } catch (err) {
+      console.error('[Telegram] Failed to send timeout notification:', err);
+      return false;
+    }
+  }
+
+  async sendOverrideAutoCancelledNotification(payload: {
+    nodeId: string;
+    pressure: number;
+  }): Promise<boolean> {
+    const telegramBot = getBot();
+
+    if (!telegramBot) {
+      console.log('[Telegram] Bot not configured. Skipping override auto-cancelled notification.');
+      return false;
+    }
+
+    const message = `⚠️ *Override cancelled on ${payload.nodeId} — Critical pressure detected (${payload.pressure} BAR). Auto control resumed.*\n\nTime: ${new Date().toISOString()}`;
+
+    try {
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'Markdown' });
+      console.log(`[Telegram] Override auto-cancelled notification sent for node ${payload.nodeId}`);
+      return true;
+    } catch (err) {
+      console.error('[Telegram] Failed to send override auto-cancelled notification:', err);
+      return false;
+    }
+  }
+
+  async sendManualOverrideNotification(payload: {
+    nodeId: string;
+    targetPosition: number;
+    operator?: string;
+  }): Promise<boolean> {
+    const telegramBot = getBot();
+
+    if (!telegramBot) {
+      console.log('[Telegram] Bot not configured. Skipping manual override notification.');
+      return false;
+    }
+
+    const operatorText = payload.operator ? ` by ${payload.operator}` : '';
+    const message = `🔧 *Manual override on ${payload.nodeId} — valve set to ${payload.targetPosition}%${operatorText}*\n\nTime: ${new Date().toISOString()}`;
+
+    try {
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'Markdown' });
+      console.log(`[Telegram] Manual override notification sent for node ${payload.nodeId}`);
+      return true;
+    } catch (err) {
+      console.error('[Telegram] Failed to send manual override notification:', err);
+      return false;
+    }
+  }
 }
 
 export const telegramService = new TelegramService();
