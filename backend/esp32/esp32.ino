@@ -10,7 +10,7 @@
 // ============================================================================
 // USER CONFIGURATION
 // ============================================================================
-#define NODE_ID          "DMA-01"
+#define NODE_ID          "DMA_01"
 #define FIRMWARE_VERSION "1.0.0"
 
 const char* WIFI_SSID     = "Hi";
@@ -164,7 +164,8 @@ void setup() {
     valveServo.attach(SERVO_CONTROL_PIN);
     setServoPosition(50);
 
-    currentState = (apiKey != nullptr) ? STATE_ONLINE : STATE_REGISTERING;
+    // Always re-register on boot to get a fresh API key
+    currentState = STATE_REGISTERING;
     Serial.println(currentState == STATE_ONLINE
         ? "[Setup] Has stored credentials - going ONLINE"
         : "[Setup] No credentials - going to REGISTER");

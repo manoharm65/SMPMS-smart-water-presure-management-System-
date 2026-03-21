@@ -18,7 +18,7 @@ export class SyncReadingDto {
 
 export class SyncTelemetryDto {
   @IsString()
-  @Matches(/^DMA-[A-Z0-9]{1,20}$/, { message: 'nodeId must match DMA-XXX format' })
+  @Matches(/^DMA_[A-Z0-9]{1,20}$/, { message: 'nodeId must match DMA_XXX format (e.g., DMA_01)' })
   nodeId!: string;
 
   @IsArray()

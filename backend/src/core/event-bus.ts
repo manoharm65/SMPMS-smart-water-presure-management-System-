@@ -110,6 +110,8 @@ export interface ActionPayload {
   riskLevel?: string;
   targetPosition?: number;
   pressure?: number;
+  /** 'operator' = direct manual command (never skip), 'decision' = AI decision engine (respects override mode) */
+  source?: 'operator' | 'decision';
 }
 
 export interface ValveModePayload {

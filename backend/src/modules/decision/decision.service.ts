@@ -107,6 +107,7 @@ export class DecisionService {
         riskLevel: decision.risk_level,
         targetPosition: decision.recommended_valve_position,
         pressure: payload.pressure,
+        source: 'decision',
       };
       eventBus.emitActionDispatched(actionPayload);
     }

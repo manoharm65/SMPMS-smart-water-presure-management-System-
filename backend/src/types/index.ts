@@ -78,6 +78,9 @@ export interface Alert {
   riskLevel: string;
   sent: boolean;
   sentAt?: string;
+  acknowledged: boolean;
+  acknowledgedAt?: string;
+  acknowledgedBy?: string;
   createdAt: string;
 }
 

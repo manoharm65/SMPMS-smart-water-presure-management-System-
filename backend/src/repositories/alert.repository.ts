@@ -15,6 +15,9 @@ export class AlertRepository {
       riskLevel: row.risk_level,
       sent: row.sent === 1,
       sentAt: row.sent_at,
+      acknowledged: row.acknowledged === 1,
+      acknowledgedAt: row.acknowledged_at ?? undefined,
+      acknowledgedBy: row.acknowledged_by ?? undefined,
       createdAt: row.created_at,
     };
   }
@@ -37,12 +40,12 @@ export class AlertRepository {
     return this.mapRow(result[0].columns, result[0].values[0]);
   }
 
-  findAll(limit = 100, offset = 0): Alert[] {
+  findAll(limit = 100, offset = 0, unacknowledgedOnly = false): Alert[] {
     const db = getDatabase();
-    const result = db.exec(
-      'SELECT * FROM alerts ORDER BY created_at DESC LIMIT ? OFFSET ?',
-      [limit, offset]
-    );
+    const sql = unacknowledgedOnly
+      ? 'SELECT * FROM alerts WHERE acknowledged = 0 ORDER BY created_at DESC LIMIT ? OFFSET ?'
+      : 'SELECT * FROM alerts ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    const result = db.exec(sql, [limit, offset]);
     if (result.length === 0) return [];
     return result[0].values.map((row: any[]) => this.mapRow(result[0].columns, row));
   }
@@ -61,6 +64,16 @@ export class AlertRepository {
     const db = getDatabase();
     const now = new Date().toISOString();
     db.run('UPDATE alerts SET sent = 1, sent_at = ? WHERE id = ?', [now, id]);
+  }
+
+  acknowledge(id: string, acknowledgedBy?: string): Alert | null {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    db.run(
+      'UPDATE alerts SET acknowledged = 1, acknowledged_at = ?, acknowledged_by = ? WHERE id = ?',
+      [now, acknowledgedBy ?? 'operator', id]
+    );
+    return this.findById(id);
   }
 
   count(): number {

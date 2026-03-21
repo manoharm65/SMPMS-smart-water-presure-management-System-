@@ -5,11 +5,11 @@ import { z } from 'zod';
  * More precise than class-validator for external/untrusted input.
  */
 
-// DMA- followed by uppercase letters and numbers, minimum DMA-A (3 chars total)
-const DMA_ID_PATTERN = /^DMA-[A-Z0-9]{1,20}$/;
+// DMA_ followed by uppercase letters and numbers, minimum DMA_0 (4 chars total)
+const DMA_ID_PATTERN = /^DMA_[A-Z0-9]{1,20}$/;
 
 export const CreateEspTelemetrySchema = z.object({
-  nodeId: z.string().regex(DMA_ID_PATTERN, 'nodeId must match DMA-XXX format (e.g., DMA-A1)'),
+  nodeId: z.string().regex(DMA_ID_PATTERN, 'nodeId must match DMA_XXX format (e.g., DMA_01)'),
   pressure: z.number().min(0, 'Pressure cannot be negative').max(20, 'Pressure cannot exceed 20 BAR'),
   valvePosition: z
     .number()
@@ -20,7 +20,7 @@ export const CreateEspTelemetrySchema = z.object({
 });
 
 export const SyncTelemetrySchema = z.object({
-  nodeId: z.string().regex(DMA_ID_PATTERN, 'nodeId must match DMA-XXX format'),
+  nodeId: z.string().regex(DMA_ID_PATTERN, 'nodeId must match DMA_XXX format (e.g., DMA_01)'),
   readings: z
     .array(
       z.object({
@@ -34,7 +34,7 @@ export const SyncTelemetrySchema = z.object({
 });
 
 export const RegisterEspSchema = z.object({
-  nodeId: z.string().regex(DMA_ID_PATTERN, 'nodeId must match DMA-XXX format'),
+  nodeId: z.string().regex(DMA_ID_PATTERN, 'nodeId must match DMA_XXX format (e.g., DMA_01)'),
   firmwareVersion: z.string().min(1, 'Firmware version is required'),
   ipAddress: z.ipv4(),
 });

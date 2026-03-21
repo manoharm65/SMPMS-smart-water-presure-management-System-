@@ -262,12 +262,11 @@ export class DashboardService {
       command: `SET_VALVE:${position}`,
     });
 
-    commandRepository.updateStatus(command.id, 'sent');
-
     eventBus.emitActionDispatched({
       nodeId,
       command: `SET_VALVE:${position}`,
       commandId: command.id,
+      source: 'operator',
     });
 
     return {

@@ -27,6 +27,9 @@ export interface AppConfig {
 }
 
 export function getConfig(): AppConfig {
+  // Ensure env vars are loaded before reading them (idempotent - safe to call multiple times)
+  loadEnv();
+
   const port = parseInt(process.env.PORT || '3000', 10);
   const jwtSecret = process.env.JWT_SECRET || 'default-secret-change-me';
   const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';

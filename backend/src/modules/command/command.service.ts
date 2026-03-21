@@ -77,15 +77,17 @@ export class CommandService {
 
   // Handle ACTION_DISPATCHED from decision engine
   async handleActionDispatched(payload: ActionPayload): Promise<void> {
-    const { nodeId, command, riskLevel, targetPosition, pressure } = payload;
-    console.log(`[CommandService] Handling ACTION_DISPATCHED: ${command} for ${nodeId} (risk: ${riskLevel})`);
+    const { nodeId, command, riskLevel, targetPosition, pressure, source } = payload;
+    console.log(`[CommandService] Handling ACTION_DISPATCHED: ${command} for ${nodeId} (risk: ${riskLevel}, source: ${source})`);
 
     // Get current valve mode
     const valveState = nodeRepository.getValveState(nodeId);
     const currentMode = valveState?.mode || 'auto';
 
-    // Check if in override mode and not CRITICAL
-    if (currentMode === 'override' && riskLevel !== 'CRITICAL') {
+    // Skip only for decision-engine commands when node is in manual override mode.
+    // Operator manual commands (source === 'operator') ALWAYS dispatch — the operator
+    // intentionally took control and their command must reach the ESP.
+    if (source !== 'operator' && currentMode === 'override' && riskLevel !== 'CRITICAL') {
       console.log(`[CommandService] Node ${nodeId} in override mode, skipping dispatch`);
       return;
     }
@@ -102,16 +104,21 @@ export class CommandService {
     }
 
     if (existingCommand) {
-      // Only CRITICAL can replace existing (manual goes through setManualOverride which cancels first)
-      const isCritical = priority === 'critical';
-      if (!isCritical) {
-        console.log(`[CommandService] Existing active command for ${nodeId}, skipping (priority: ${priority})`);
-        return;
+      // Operator commands ALWAYS replace existing (operator explicitly took action)
+      if (source === 'operator') {
+        console.log(`[CommandService] Cancelling existing ${existingCommand.status} command ${existingCommand.id} (operator override)`);
+        commandRepository.cancelByNodeId(nodeId);
+      } else {
+        // Decision engine: only CRITICAL can replace existing
+        const isCritical = priority === 'critical';
+        if (!isCritical) {
+          console.log(`[CommandService] Existing active command for ${nodeId}, skipping (priority: ${priority})`);
+          return;
+        }
+        // Replace existing command
+        console.log(`[CommandService] Replacing existing command ${existingCommand.id} (new priority: ${priority})`);
+        commandRepository.cancelByNodeId(nodeId);
       }
-
-      // Replace existing command
-      console.log(`[CommandService] Replacing existing command ${existingCommand.id} (new priority: ${priority})`);
-      commandRepository.cancelByNodeId(nodeId);
     }
 
     // Calculate target position from command if not provided

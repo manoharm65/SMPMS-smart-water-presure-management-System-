@@ -2,7 +2,7 @@ import { IsString, IsNumber, IsOptional, Min, Max, Matches } from 'class-validat
 
 export class CreateEspTelemetryDto {
   @IsString()
-  @Matches(/^DMA-[A-Z0-9]{1,20}$/, { message: 'nodeId must match DMA-XXX format (e.g., DMA-A1)' })
+  @Matches(/^DMA_[A-Z0-9]{1,20}$/, { message: 'nodeId must match DMA_XXX format (e.g., DMA_01)' })
   nodeId!: string;
 
   @IsNumber()

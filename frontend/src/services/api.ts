@@ -157,7 +157,7 @@ export async function getKPI(cfg?: ApiConfig): Promise<KPI> {
 }
 
 export async function getAlerts(cfg?: ApiConfig): Promise<Alert[]> {
-  return apiGet<Alert[]>(`${BASE_URL}/alerts`, cfg)
+  return apiGet<Alert[]>(`${BASE_URL}/alerts?unacknowledged=true`, cfg)
 }
 
 export async function getZoneDetail(zoneId: string, cfg?: ApiConfig): Promise<ZoneDetail> {

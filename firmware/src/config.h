@@ -15,7 +15,7 @@
 // ============================================================================
 // Node Identity (Hardcoded per device - set at factory)
 // ============================================================================
-#define NODE_ID "DMA-01"  // Change per device: DMA-01 through DMA-08
+#define NODE_ID "DMA_01"  // Change per device: DMA_01 through DMA_08
 #define FIRMWARE_VERSION "1.0.0"
 
 // ============================================================================
@@ -94,8 +94,8 @@ struct PressureThresholds {
 #define ENDPOINT_REGISTER      API_BASE_URL "/nodes/register"
 
 // Telemetry
-#define ENDPOINT_TELEMETRY     API_BASE_URL "/telemetry"
-#define ENDPOINT_TELEMETRY_SYNC API_BASE_URL "/telemetry/sync"
+#define ENDPOINT_TELEMETRY     API_BASE_URL "/esp/telemetry"
+#define ENDPOINT_TELEMETRY_SYNC API_BASE_URL "/esp/telemetry/sync"
 
 // Commands
 #define ENDPOINT_COMMAND_ACK   API_BASE_URL "/commands/"  // + commandId + "/ack"

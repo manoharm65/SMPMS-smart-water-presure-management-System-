@@ -27,20 +27,21 @@ export class AlertService {
     console.log(`[Alert] Stored alert ${alert.id}`);
 
     // Send Telegram notification
-    const sent = await telegramService.sendAlert({
-      nodeId: payload.nodeId,
-      message: payload.message,
-      riskLevel: payload.riskLevel,
-    });
+    // TODO: Re-enable once Telegram is fully configured
+    // const sent = await telegramService.sendAlert({
+    //   nodeId: payload.nodeId,
+    //   message: payload.message,
+    //   riskLevel: payload.riskLevel,
+    // });
 
-    if (sent) {
-      alertRepository.markSent(alert.id);
-      console.log(`[Alert] Telegram notification sent for alert ${alert.id}`);
-    }
+    // if (sent) {
+    //   alertRepository.markSent(alert.id);
+    //   console.log(`[Alert] Telegram notification sent for alert ${alert.id}`);
+    // }
   }
 
-  findAll(limit = 100, offset = 0): Alert[] {
-    return alertRepository.findAll(limit, offset);
+  findAll(limit = 100, offset = 0, unacknowledgedOnly = false): Alert[] {
+    return alertRepository.findAll(limit, offset, unacknowledgedOnly);
   }
 
   findByNodeId(nodeId: string, limit = 50): Alert[] {
@@ -49,6 +50,10 @@ export class AlertService {
 
   count(): number {
     return alertRepository.count();
+  }
+
+  acknowledge(id: string, acknowledgedBy?: string) {
+    return alertRepository.acknowledge(id, acknowledgedBy);
   }
 }
 
