@@ -12,6 +12,7 @@ export type ValveNodeProps = {
   radius?: number
   showTooltip?: boolean
   interactive?: boolean
+  selected?: boolean
 }
 
 function formatValue(v: unknown) {
@@ -37,14 +38,14 @@ function pickTooltipPairs(properties?: Record<string, unknown>) {
 function severityColor(sev: ValveNodeProps['severity']) {
   switch (sev) {
     case 'critical':
-      return '#f04d4d'
+      return '#6d28d9'
     case 'warning':
-      return '#f5a623'
+      return '#7c3aed'
     case 'low':
-      return '#4a9ff5'
+      return '#a855f7'
     case 'normal':
     default:
-      return '#00c896'
+      return '#8b5cf6'
   }
 }
 
@@ -59,18 +60,20 @@ export default function ValveNode({
   radius = 6,
   showTooltip = true,
   interactive = true,
+  selected = false,
 }: ValveNodeProps) {
   const color = severityColor(severity)
   const pairs = pickTooltipPairs(properties)
+  const r = selected ? Math.max(radius + 3, radius * 1.4) : radius
 
   return (
     <CircleMarker
       center={position}
-      radius={radius}
+      radius={r}
       interactive={interactive}
       pathOptions={{
         color,
-        weight: 2,
+        weight: selected ? 3 : 2,
         fillColor: '#080d14',
         fillOpacity: 0.9,
       }}
