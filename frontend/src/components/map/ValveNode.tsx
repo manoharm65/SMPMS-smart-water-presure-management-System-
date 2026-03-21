@@ -13,6 +13,7 @@ export type ValveNodeProps = {
   showTooltip?: boolean
   interactive?: boolean
   selected?: boolean
+  highlighted?: boolean
 }
 
 function formatValue(v: unknown) {
@@ -61,10 +62,11 @@ export default function ValveNode({
   showTooltip = true,
   interactive = true,
   selected = false,
+  highlighted = false,
 }: ValveNodeProps) {
-  const color = severityColor(severity)
+  const color = highlighted ? '#22c55e' : severityColor(severity)
   const pairs = pickTooltipPairs(properties)
-  const r = selected ? Math.max(radius + 3, radius * 1.4) : radius
+  const r = highlighted ? 8 : (selected ? Math.max(radius + 3, radius * 1.4) : radius)
 
   return (
     <CircleMarker

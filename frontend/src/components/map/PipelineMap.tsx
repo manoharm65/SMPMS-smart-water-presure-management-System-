@@ -7,6 +7,11 @@ import ValveNode from './ValveNode'
 
 type DiameterBand = 'xl' | 'lg' | 'md' | 'sm' | 'unknown'
 
+// Valves to highlight with green color and zoom to
+const HIGHLIGHTED_VALVES = ['27492', '27521']
+// Midpoint between valves 27492 and 27521
+const HIGHLIGHTED_CENTER: LatLngTuple = [12.9165618, 77.4980033]
+
 function parseDiameterMm(props?: Record<string, unknown>) {
   if (!props) return undefined
   const v = props.diameterMm ?? props.diameter ?? props.Diameter ?? props.DIA ?? props.dia
@@ -118,6 +123,9 @@ export default function PipelineMap({
   }, [pipelines.length])
 
   const initialCenter = useMemo<LatLngTuple>(() => {
+    // Check if highlighted valves exist in the data
+    const hasHighlighted = valves.some(v => HIGHLIGHTED_VALVES.includes(v.id))
+    if (hasHighlighted) return HIGHLIGHTED_CENTER
     const bengaluru: LatLngTuple = [12.9716, 77.5946]
     return zones[0]?.centroid ?? valves[0]?.position ?? pipelines[0]?.path?.[0] ?? bengaluru
   }, [pipelines, valves, zones])
@@ -173,7 +181,7 @@ export default function PipelineMap({
 
   return (
     <div className="relative h-full w-full">
-      <MapContainer center={initialCenter} zoom={13} zoomControl preferCanvas>
+      <MapContainer center={initialCenter} zoom={17} zoomControl preferCanvas>
         <Pane name="basemap" style={{ zIndex: 100 }}>
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -311,6 +319,7 @@ export default function PipelineMap({
                 showTooltip={!perf.hugeValves}
                 interactive={!perf.hugeValves}
                 selected={selectedValveId === v.id}
+                highlighted={HIGHLIGHTED_VALVES.includes(v.id)}
               />
             )
           })}
