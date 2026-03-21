@@ -204,6 +204,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
           res.json({
             registered: true,
             node_id: result.node.nodeId,
+            api_key: result.apiKey,
             telemetry_interval_ms: result.telemetryIntervalMs,
             pressure_thresholds: result.pressureThresholds,
           });

@@ -143,7 +143,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       testApp.use(express.json());
       testApp.post('/api/v1/esp/telemetry', async (req, res) => {
         try {
-          const { telemetryService } = await import('../telemetry.service');
+
           const dto = req.body;
           if (!dto.nodeId) {
             res.status(400).json({ error: 'nodeId is required' });
@@ -171,7 +171,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       testApp.use(express.json());
       testApp.post('/api/v1/esp/telemetry', async (req, res) => {
         try {
-          const { telemetryService } = await import('../telemetry.service');
+
           const dto = req.body;
           if (dto.pressure === undefined) {
             res.status(400).json({ error: 'pressure is required' });
@@ -282,7 +282,6 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       testApp.use(express.json());
       testApp.post('/api/v1/esp/telemetry', async (req, res) => {
         try {
-          const { telemetryService } = await import('../telemetry.service');
           const result = await telemetryService.createForEsp(req.body);
           res.json(result);
         } catch (err: any) {
@@ -319,7 +318,6 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       testApp.use(express.json());
       testApp.post('/api/v1/esp/telemetry', async (req, res) => {
         try {
-          const { telemetryService } = await import('../telemetry.service');
           const result = await telemetryService.createForEsp(req.body);
           res.json(result);
         } catch (err: any) {
@@ -360,7 +358,6 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       testApp.use(express.json());
       testApp.post('/api/v1/esp/telemetry', async (req, res) => {
         try {
-          const { telemetryService } = await import('../telemetry.service');
           const result = await telemetryService.createForEsp(req.body);
           res.json(result);
         } catch (err: any) {
@@ -405,7 +402,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       testApp.use(express.json());
       testApp.post('/api/v1/esp/telemetry', async (req, res) => {
         try {
-          const { telemetryService } = await import('../telemetry.service');
+
           await telemetryService.createForEsp(req.body);
           res.json({ received: true, command: null });
         } catch (err: any) {
@@ -446,7 +443,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       testApp.use(express.json());
       testApp.post('/api/v1/esp/telemetry', async (req, res) => {
         try {
-          const { telemetryService } = await import('../telemetry.service');
+
           await telemetryService.createForEsp(req.body);
           res.json({ received: true, command: null });
         } catch (err: any) {
@@ -488,7 +485,6 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       testApp.use(express.json());
       testApp.post('/api/v1/esp/telemetry', async (req, res) => {
         try {
-          const { telemetryService } = await import('../telemetry.service');
           const result = await telemetryService.createForEsp(req.body);
           res.json(result);
         } catch (err: any) {
@@ -525,7 +521,6 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       testApp.use(express.json());
       testApp.post('/api/v1/esp/telemetry', async (req, res) => {
         try {
-          const { telemetryService } = await import('../telemetry.service');
           const result = await telemetryService.createForEsp(req.body);
           res.json(result);
         } catch (err: any) {
@@ -562,7 +557,6 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       testApp.use(express.json());
       testApp.post('/api/v1/esp/telemetry', async (req, res) => {
         try {
-          const { telemetryService } = await import('../telemetry.service');
           const result = await telemetryService.createForEsp(req.body);
           res.json(result);
         } catch (err: any) {
@@ -590,7 +584,6 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       testApp.use(express.json());
       testApp.post('/api/v1/esp/telemetry', async (req, res) => {
         try {
-          const { telemetryService } = await import('../telemetry.service');
           const result = await telemetryService.createForEsp(req.body);
           res.json(result);
         } catch (err: any) {

@@ -14,6 +14,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     res.json({
       registered: true,
       node_id: result.node.nodeId,
+      api_key: result.node.apiKey,
       telemetry_interval_ms: result.telemetryIntervalMs,
       pressure_thresholds: result.pressureThresholds,
     });

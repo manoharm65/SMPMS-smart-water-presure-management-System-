@@ -4,7 +4,6 @@ const navItems = [
   { to: '/', label: 'HOME' },
   { to: '/map', label: 'MAP VIEW' },
   { to: '/overview', label: 'OVERVIEW' },
-  { to: '/zones/:zoneId', label: 'ZONE DETAIL' },
   { to: '/alerts', label: 'ALERTS' },
   { to: '/analytics', label: 'ANALYTICS' },
 ]

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npm test:*)",
+      "Bash(npx playwright:*)",
+      "Bash(sqlite3 d:/SAMVED/web/SMPMS-smart-water-presure-management-System-/backend/data/smpms.db \"PRAGMA table_info\\(alerts\\);\")",
+      "Bash(sqlite3 d:/SAMVED/web/SMPMS-smart-water-presure-management-System-/backend/data/smpms.db \"SELECT COUNT\\(*\\) FROM alerts;\")",
+      "Bash(sqlite3 d:/SAMVED/web/SMPMS-smart-water-presure-management-System-/backend/data/smpms.db \"ALTER TABLE alerts ADD COLUMN acknowledged INTEGER DEFAULT 0; SELECT ''done'';\")",
+      "Bash(git add:*)",
+      "Bash(sqlite3 d:/SAMVED/web/SMPMS-smart-water-presure-management-System-/backend/data/smpms.db \"SELECT * FROM alerts;\")"
+    ]
+  }
+}

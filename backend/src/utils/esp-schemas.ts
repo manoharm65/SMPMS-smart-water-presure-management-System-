@@ -36,7 +36,7 @@ export const SyncTelemetrySchema = z.object({
 export const RegisterEspSchema = z.object({
   nodeId: z.string().regex(DMA_ID_PATTERN, 'nodeId must match DMA-XXX format'),
   firmwareVersion: z.string().min(1, 'Firmware version is required'),
-  ipAddress: z.string().ip({ message: 'Must be a valid IP address' }),
+  ipAddress: z.ipv4(),
 });
 
 export type CreateEspTelemetryInput = z.infer<typeof CreateEspTelemetrySchema>;

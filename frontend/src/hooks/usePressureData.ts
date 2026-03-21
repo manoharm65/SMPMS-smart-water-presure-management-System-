@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiGet } from '../services/api'
+import { getPressureHistory } from '../services/api'
 
 export type PressureHistoryPoint = {
   ts: string
@@ -9,7 +9,7 @@ export type PressureHistoryPoint = {
 export function usePressureData(zoneId: string) {
   return useQuery({
     queryKey: ['pressure-history', zoneId],
-    queryFn: () => apiGet<PressureHistoryPoint[]>(`/zones/${zoneId}/pressure`),
+    queryFn: () => getPressureHistory(zoneId, '24h'),
     enabled: Boolean(zoneId),
   })
 }
