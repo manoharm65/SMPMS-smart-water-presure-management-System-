@@ -23,9 +23,9 @@ function resolveMapUrls(): MapUrls {
 
   const prefix = base && base.length > 0 ? base.replace(/\/$/, '') : ''
   return {
-    zonesUrl: `${prefix}/data/solapur/zones.geojson`,
-    pipelinesUrl: `${prefix}/data/solapur/pipelines.geojson`,
-    valvesUrl: `${prefix}/data/solapur/valves.geojson`,
+    zonesUrl: `${prefix}/data/kengeri/zones.geojson`,
+    pipelinesUrl: `${prefix}/data/kengeri/pipelines.geojson`,
+    valvesUrl: `${prefix}/data/kengeri/valves.geojson`,
   }
 }
 

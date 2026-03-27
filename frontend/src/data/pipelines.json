@@ -1,0 +1,85 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "P-001",
+        "zoneId": "DMA-01",
+        "diameter": 200
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.59, 13.05],
+          [77.592, 13.03],
+          [77.595, 13.01]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "P-002",
+        "zoneId": "DMA-02",
+        "diameter": 150
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.62, 12.91],
+          [77.622, 12.93],
+          [77.625, 12.95]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "P-003",
+        "zoneId": "DMA-03",
+        "diameter": 180
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.72, 12.93],
+          [77.718, 12.95],
+          [77.715, 12.97]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "P-004",
+        "zoneId": "DMA-04",
+        "diameter": 160
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.52, 12.97],
+          [77.518, 12.95],
+          [77.515, 12.93]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "P-005",
+        "zoneId": "DMA-05",
+        "diameter": 300
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.59, 12.98],
+          [77.592, 12.96],
+          [77.595, 12.94]
+        ]
+      }
+    }
+  ]
+}

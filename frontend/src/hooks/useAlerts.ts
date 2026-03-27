@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiGet } from '../services/api'
+import { getAlerts } from '../services/api'
 
 export type AlertSeverity = 'critical' | 'warning' | 'info'
 
@@ -16,6 +16,6 @@ export type Alert = {
 export function useAlerts(filter: 'all' | 'critical' | 'warning' | 'resolved') {
   return useQuery({
     queryKey: ['alerts', filter],
-    queryFn: () => apiGet<Alert[]>(`/alerts?filter=${filter}`),
+    queryFn: () => getAlerts(),
   })
 }

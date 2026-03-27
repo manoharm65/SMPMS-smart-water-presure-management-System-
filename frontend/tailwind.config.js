@@ -4,33 +4,23 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: '#080d14',
-        panel: '#0b1320',
-        border: 'rgba(255,255,255,0.08)',
-        text: {
-          DEFAULT: 'rgba(255,255,255,0.86)',
-          muted: 'rgba(255,255,255,0.62)',
-          faint: 'rgba(255,255,255,0.42)',
-        },
-        accent: {
-          DEFAULT: '#00c896',
-        },
-        warning: '#f5a623',
-        critical: '#f04d4d',
-        info: '#4a9ff5',
-        pressure: {
-          normal: '#00c896',
-          low: '#4a9ff5',
-          warning: '#f5a623',
-          critical: '#f04d4d',
-        },
+        ink: '#0A0A0A',
+        paper: '#F5F0E8',
+        rule: '#1A1A1A',
+        dim: '#6B6B6B',
+        muted: '#B8B2A8',
+        signal: '#E8001D',
+        pass: '#007A3D',
+        warn: '#CC5500',
+        low: '#004DB3',
       },
       fontFamily: {
-        sans: ['"IBM Plex Sans"', 'system-ui', 'Segoe UI', 'Roboto', 'sans-serif'],
-        mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'Consolas', 'monospace'],
+        syne: ['Syne', 'sans-serif'],
+        mono: ['Space Mono', 'monospace'],
+        condensed: ['Barlow Condensed', 'sans-serif'],
+        sans: ['Barlow Condensed', 'sans-serif'],
       },
     },
   },
   plugins: [],
 }
-
