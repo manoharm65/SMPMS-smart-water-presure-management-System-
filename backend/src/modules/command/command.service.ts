@@ -290,6 +290,12 @@ export class CommandService {
       case 'EMERGENCY_CLOSE':
         return 0;
       default:
+        if (command.startsWith('SET_VALVE:')) {
+          const pos = parseInt(command.split(':')[1], 10);
+          if (!isNaN(pos) && pos >= 0 && pos <= 100) {
+            return pos;
+          }
+        }
         return currentPosition;
     }
   }
