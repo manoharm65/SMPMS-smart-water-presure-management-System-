@@ -130,8 +130,20 @@ export class CommandRepository {
 
   findOldestPendingByNodeId(nodeId: string): Command | null {
     const db = getDatabase();
+    // Priority order: manual > critical > warning > normal
+    // Manual commands should always take precedence over auto-generated commands
     const result = db.exec(
-      "SELECT * FROM commands WHERE node_id = ? AND status = 'PENDING' ORDER BY created_at ASC LIMIT 1",
+      `SELECT * FROM commands 
+       WHERE node_id = ? AND status = 'PENDING' 
+       ORDER BY 
+         CASE priority 
+           WHEN 'manual' THEN 0 
+           WHEN 'critical' THEN 1 
+           WHEN 'warning' THEN 2 
+           ELSE 3 
+         END ASC,
+         created_at ASC 
+       LIMIT 1`,
       [nodeId]
     );
     if (result.length === 0 || result[0].values.length === 0) return null;

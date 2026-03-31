@@ -1,4 +1,4 @@
-#define NODE_ID          "DMA_99"
+#define NODE_ID          "DMA_15"
 #define FIRMWARE_VERSION "1.0.0"
 
 const char* WIFI_SSID     = "Datta";
@@ -485,17 +485,80 @@ void sendTelemetry() {
 
     if (code == 200 || code == 201) {
         String resp = http.getString();
-        Serial.println("[Telemetry] OK");
+        Serial.println("[Telemetry] OK - HTTP " + String(code));
+        
+        // DEBUG: Print full raw response
+        Serial.println("[DEBUG] ====== RAW RESPONSE START ======");
+        Serial.println(resp);
+        Serial.println("[DEBUG] ====== RAW RESPONSE END ======");
+        Serial.println("[DEBUG] Response length: " + String(resp.length()) + " bytes");
 
         StaticJsonDocument<512> rd;
-        if (!deserializeJson(rd, resp) && rd["command"].is<JsonObject>()) {
-            const char* cmdType = rd["command"]["type"]       | "";
-            int         cmdVal  = rd["command"]["value"]      | 0;
-            const char* cmdId   = rd["command"]["command_id"] | "";
-            Serial.println("[Command] Received: " + String(cmdType) +
-                           " -> " + String(cmdVal));
-            if (strcmp(cmdType, "SET_VALVE") == 0)
-                executeSetValve(cmdVal, cmdId);
+        DeserializationError jsonErr = deserializeJson(rd, resp);
+        
+        // DEBUG: JSON parsing status
+        if (jsonErr) {
+            Serial.println("[DEBUG] JSON parse FAILED: " + String(jsonErr.c_str()));
+        } else {
+            Serial.println("[DEBUG] JSON parse SUCCESS");
+            
+            // DEBUG: Check what keys exist at root level
+            Serial.print("[DEBUG] Root keys: ");
+            for (JsonPair kv : rd.as<JsonObject>()) {
+                Serial.print(String(kv.key().c_str()) + ", ");
+            }
+            Serial.println();
+            
+            // DEBUG: Check command object
+            if (rd.containsKey("command")) {
+                Serial.println("[DEBUG] 'command' key EXISTS");
+                
+                if (rd["command"].isNull()) {
+                    Serial.println("[DEBUG] 'command' value is NULL");
+                } else if (rd["command"].is<JsonObject>()) {
+                    Serial.println("[DEBUG] 'command' is a JsonObject");
+                    
+                    // Print all command fields
+                    JsonObject cmdObj = rd["command"].as<JsonObject>();
+                    Serial.print("[DEBUG] Command keys: ");
+                    for (JsonPair kv : cmdObj) {
+                        Serial.print(String(kv.key().c_str()) + "=");
+                        if (kv.value().is<const char*>()) {
+                            Serial.print("\"" + String(kv.value().as<const char*>()) + "\"");
+                        } else if (kv.value().is<int>()) {
+                            Serial.print(String(kv.value().as<int>()));
+                        } else {
+                            Serial.print("(other)");
+                        }
+                        Serial.print(", ");
+                    }
+                    Serial.println();
+                    
+                    const char* cmdType = rd["command"]["type"]       | "";
+                    int         cmdVal  = rd["command"]["value"]      | 0;
+                    const char* cmdId   = rd["command"]["command_id"] | "";
+                    
+                    Serial.println("[DEBUG] Extracted: type=\"" + String(cmdType) + 
+                                   "\", value=" + String(cmdVal) + 
+                                   ", command_id=\"" + String(cmdId) + "\"");
+                    
+                    Serial.println("[Command] Received: " + String(cmdType) +
+                                   " -> " + String(cmdVal));
+                    
+                    if (strcmp(cmdType, "SET_VALVE") == 0) {
+                        Serial.println("[DEBUG] Executing SET_VALVE command...");
+                        executeSetValve(cmdVal, cmdId);
+                    } else if (strlen(cmdType) == 0) {
+                        Serial.println("[DEBUG] Command type is EMPTY - not executing");
+                    } else {
+                        Serial.println("[DEBUG] Unknown command type: " + String(cmdType));
+                    }
+                } else {
+                    Serial.println("[DEBUG] 'command' is NOT a JsonObject (unexpected type)");
+                }
+            } else {
+                Serial.println("[DEBUG] 'command' key DOES NOT EXIST in response");
+            }
         }
 
     } else {

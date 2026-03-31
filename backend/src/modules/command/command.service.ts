@@ -109,13 +109,20 @@ export class CommandService {
         console.log(`[CommandService] Cancelling existing ${existingCommand.status} command ${existingCommand.id} (operator override)`);
         commandRepository.cancelByNodeId(nodeId);
       } else {
-        // Decision engine: only CRITICAL can replace existing
+        // Decision engine commands: check if existing is a manual command
+        // Manual operator commands are SACROSANCT - never cancelled by automatic decisions
+        if (existingCommand.priority === 'manual') {
+          console.log(`[CommandService] Existing MANUAL command for ${nodeId}, automatic ${priority} command cannot override — skipping`);
+          return;
+        }
+        
+        // Decision engine: only CRITICAL can replace existing non-manual commands
         const isCritical = priority === 'critical';
         if (!isCritical) {
           console.log(`[CommandService] Existing active command for ${nodeId}, skipping (priority: ${priority})`);
           return;
         }
-        // Replace existing command
+        // Replace existing non-manual command
         console.log(`[CommandService] Replacing existing command ${existingCommand.id} (new priority: ${priority})`);
         commandRepository.cancelByNodeId(nodeId);
       }
