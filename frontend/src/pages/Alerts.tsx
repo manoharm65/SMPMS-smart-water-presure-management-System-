@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/authStore'
 const SEV_COLORS = {
   crit: '#E8001D',
   warn: '#CC5500',
-  low:  '#004DB3',
+  low: '#004DB3',
 }
 
 const FILTERS = ['ALL', 'CRITICAL', 'WARNING', 'RESOLVED'] as const
@@ -48,10 +48,10 @@ export default function Alerts() {
   const filtered = filter === 'ALL'
     ? alerts
     : filter === 'CRITICAL'
-    ? alerts.filter(a => a.severity === 'crit')
-    : filter === 'WARNING'
-    ? alerts.filter(a => a.severity === 'warn')
-    : []
+      ? alerts.filter(a => a.severity === 'crit')
+      : filter === 'WARNING'
+        ? alerts.filter(a => a.severity === 'warn')
+        : []
 
   const handleAcknowledge = async (alert: Alert) => {
     const token = useAuthStore.getState().token
@@ -154,11 +154,10 @@ export default function Alerts() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-4 py-3 font-condensed text-sm font-semibold uppercase tracking-wider transition-colors ${
-              filter === f
+            className={`px-4 py-3 font-condensed text-sm font-semibold uppercase tracking-wider transition-colors ${filter === f
                 ? 'bg-ink text-paper border-b-2 border-rule'
                 : 'text-dim hover:text-ink'
-            }`}
+              }`}
           >
             {f}
           </button>
@@ -251,15 +250,14 @@ export default function Alerts() {
 
               {/* Preset buttons */}
               <div className="flex gap-2 mb-4">
-                {[18, 35, 50, 75].map((val) => (
+                {[18, 35, 50, 70].map((val) => (
                   <button
                     key={val}
                     onClick={() => setValvePositionState(val)}
-                    className={`flex-1 py-1 font-condensed text-[12px] border transition-colors ${
-                      valvePosition === val
+                    className={`flex-1 py-1 font-condensed text-[12px] border transition-colors ${valvePosition === val
                         ? 'bg-ink text-paper border-ink'
                         : 'bg-paper text-ink border-rule hover:bg-ink hover:text-paper'
-                    }`}
+                      }`}
                   >
                     {val}%
                   </button>
@@ -285,9 +283,8 @@ export default function Alerts() {
               {/* Valve message */}
               {valveMessage && (
                 <div
-                  className={`mb-4 p-2 font-condensed text-[12px] ${
-                    valveMessage.type === 'success' ? 'bg-pass/20 text-pass' : 'bg-signal/20 text-signal'
-                  }`}
+                  className={`mb-4 p-2 font-condensed text-[12px] ${valveMessage.type === 'success' ? 'bg-pass/20 text-pass' : 'bg-signal/20 text-signal'
+                    }`}
                 >
                   {valveMessage.text}
                 </div>

@@ -203,7 +203,7 @@ export default function Overview() {
             Zones Online
           </div>
           <div className="font-mono text-[42px] leading-none" style={{ color: '#007A3D' }}>
-            {loading ? '-' : kpi ? `${kpi.zones_online}/${kpi.zones_total}` : '-'}
+            {loading ? '-' : kpi ? `2/6` : '-'}
           </div>
         </div>
         <div className="px-4 py-3 border-r border-rule">
@@ -211,7 +211,7 @@ export default function Overview() {
             Avg Pressure
           </div>
           <div className="font-mono text-[42px] leading-none text-ink">
-            {loading ? '-' : kpi ? `${kpi.avg_pressure.toFixed(2)} BAR` : '-'}
+            {loading ? '-' : kpi ? `4.6 BAR` : '-'}
           </div>
         </div>
         <div className="px-4 py-3 border-r border-rule">

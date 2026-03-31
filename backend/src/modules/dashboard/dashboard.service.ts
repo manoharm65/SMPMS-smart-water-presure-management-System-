@@ -3,7 +3,7 @@ import { telemetryRepository } from '../../repositories/telemetry.repository.js'
 import { alertRepository } from '../../repositories/alert.repository.js';
 import { decisionRepository } from '../../repositories/decision.repository.js';
 import { commandRepository } from '../../repositories/command.repository.js';
-import { eventBus } from '../../core/event-bus.js';
+import { commandService } from '../command/command.service.js';
 import { ZoneSummary, KpiData, AlertData, PressureHistory, PressureReading, ZoneDetail, AnomalyData } from './types.js';
 
 function toZoneId(nodeId: string): string {
@@ -114,8 +114,8 @@ export class DashboardService {
   }
 
   getAlerts(): AlertData[] {
-    const alerts = alertRepository.findAll(10, 0)
-      .filter(a => !a.sent);
+    const alerts = alertRepository.findAll(100, 0)
+      .filter(a => !a.acknowledged);
 
     return alerts.map(alert => {
       const node = nodeRepository.findByNodeId(alert.nodeId);
@@ -255,19 +255,14 @@ export class DashboardService {
     const node = nodeRepository.findByNodeId(nodeId);
     if (!node) throw new Error('Zone not found');
 
-    nodeRepository.update(node.id, { valvePosition: position, valveMode: 'override' });
-
-    const command = commandRepository.create({
-      nodeId,
-      command: `SET_VALVE:${position}`,
-    });
-
-    eventBus.emitActionDispatched({
-      nodeId,
-      command: `SET_VALVE:${position}`,
-      commandId: command.id,
-      source: 'operator',
-    });
+    // Use commandService.setManualOverride() which properly:
+    // 1. Cancels existing pending commands
+    // 2. Sets valve mode to 'override'
+    // 3. Creates command with correct targetPosition and priority
+    // 4. Updates node state
+    // 5. Sends Telegram notification
+    // 6. Emits valve mode changed event
+    const command = commandService.setManualOverride(nodeId, position);
 
     return {
       success: true,

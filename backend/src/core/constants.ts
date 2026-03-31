@@ -48,7 +48,7 @@ export const COMMAND_STATUS = {
 
 export type CommandStatus = (typeof COMMAND_STATUS)[keyof typeof COMMAND_STATUS];
 
-// Command priority: critical > warning > normal > manual
+// Command priority: manual > critical > warning > normal (manual operator commands always take precedence)
 export const COMMAND_PRIORITY = {
   CRITICAL: 'critical',
   WARNING: 'warning',

@@ -383,15 +383,14 @@ export default function ZoneDetail() {
 
           {/* Preset Buttons */}
           <div className="flex gap-2 mb-4">
-            {[18, 35, 50, 75].map((val) => (
+            {[18, 35, 50, 70].map((val) => (
               <button
                 key={val}
                 onClick={() => handlePresetClick(val)}
-                className={`px-3 py-1 font-condensed text-[12px] border transition-colors ${
-                  valvePosition === val
-                    ? 'bg-ink text-paper border-ink'
-                    : 'bg-paper text-ink border-rule hover:bg-ink hover:text-paper'
-                }`}
+                className={`px-3 py-1 font-condensed text-[12px] border transition-colors ${valvePosition === val
+                  ? 'bg-ink text-paper border-ink'
+                  : 'bg-paper text-ink border-rule hover:bg-ink hover:text-paper'
+                  }`}
               >
                 {val}%
               </button>
@@ -425,9 +424,8 @@ export default function ZoneDetail() {
           {/* Valve operation message */}
           {valveMessage && (
             <div
-              className={`mb-4 p-2 font-condensed text-[12px] ${
-                valveMessage.type === 'success' ? 'bg-pass/20 text-pass' : 'bg-signal/20 text-signal'
-              }`}
+              className={`mb-4 p-2 font-condensed text-[12px] ${valveMessage.type === 'success' ? 'bg-pass/20 text-pass' : 'bg-signal/20 text-signal'
+                }`}
             >
               {valveMessage.text}
             </div>

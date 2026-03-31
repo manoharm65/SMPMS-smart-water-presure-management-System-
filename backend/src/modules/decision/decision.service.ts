@@ -73,7 +73,7 @@ export class DecisionService {
       engine: 'rule',
     });
 
-    // CRITICAL or WARNING: emit both ALERT_TRIGGERED and ACTION_DISPATCHED
+    // CRITICAL or WARNING: emit ALERT_TRIGGERED and possibly ACTION_DISPATCHED
     if (decision.risk_level === 'CRITICAL' || decision.risk_level === 'WARNING') {
       eventBus.emitAlertTriggered({
         nodeId: payload.nodeId,
@@ -81,35 +81,26 @@ export class DecisionService {
         riskLevel: decision.risk_level,
       });
 
-      // CRITICAL auto-revert: if node is in override mode, revert to auto before dispatching
-      if (decision.risk_level === 'CRITICAL') {
-        const valveState = nodeRepository.getValveState(payload.nodeId);
-        if (valveState?.mode === 'override') {
-          console.log(`[Decision] CRITICAL on override node ${payload.nodeId} — auto-reverting to auto`);
-
-          // Emit valve mode changed event (auto-revert)
-          const valveModePayload: ValveModePayload = {
-            nodeId: payload.nodeId,
-            previousMode: 'override',
-            newMode: 'auto',
-            reason: 'critical_auto_revert',
-            pressure: payload.pressure,
-          };
-          eventBus.emitValveModeChanged(valveModePayload);
-        }
+      // Check if node is in override mode - if so, skip automatic command dispatch
+      // Manual operator commands ALWAYS take precedence over automatic decisions
+      const valveState = nodeRepository.getValveState(payload.nodeId);
+      if (valveState?.mode === 'override') {
+        console.log(`[Decision] Node ${payload.nodeId} in override mode — skipping automatic command dispatch (alert still sent)`);
+        // Don't emit ACTION_DISPATCHED - manual operator command takes precedence
+        // Alert was already emitted above for logging/notification purposes
+      } else {
+        // Node is in auto mode - emit action dispatched with risk level and target position
+        const actionPayload: ActionPayload = {
+          nodeId: payload.nodeId,
+          command: decision.action,
+          commandId: decisionRecord.id,
+          riskLevel: decision.risk_level,
+          targetPosition: decision.recommended_valve_position,
+          pressure: payload.pressure,
+          source: 'decision',
+        };
+        eventBus.emitActionDispatched(actionPayload);
       }
-
-      // Emit action dispatched with risk level and target position for priority handling
-      const actionPayload: ActionPayload = {
-        nodeId: payload.nodeId,
-        command: decision.action,
-        commandId: decisionRecord.id,
-        riskLevel: decision.risk_level,
-        targetPosition: decision.recommended_valve_position,
-        pressure: payload.pressure,
-        source: 'decision',
-      };
-      eventBus.emitActionDispatched(actionPayload);
     }
     // LOW: emit ALERT_TRIGGERED only
     else if (decision.risk_level === 'LOW' && decision.requires_alert) {
