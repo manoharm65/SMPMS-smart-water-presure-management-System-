@@ -17,7 +17,16 @@ function getBot(): TelegramBot | null {
 }
 
 export class TelegramService {
-  async sendAlert(alert: { nodeId: string; message: string; riskLevel: string }): Promise<boolean> {
+  async sendAlert(alert: {
+    nodeId: string;
+    message: string;
+    riskLevel: string;
+    location?: string;
+    pressureBar?: number;
+    recommendedAction?: string;
+    recommendedValvePosition?: number;
+    recommendations?: string[];
+  }): Promise<boolean> {
     const telegramBot = getBot();
 
     if (!telegramBot) {
@@ -25,11 +34,43 @@ export class TelegramService {
       return false;
     }
 
-    const riskEmoji = alert.riskLevel === 'HIGH' ? '🚨' : alert.riskLevel === 'MEDIUM' ? '⚠️' : 'ℹ️';
-    const message = `${riskEmoji} *${alert.riskLevel} RISK ALERT*\n\nNode: ${alert.nodeId}\n${alert.message}\n\nTime: ${new Date().toISOString()}`;
+    const riskEmoji = alert.riskLevel === 'CRITICAL' || alert.riskLevel === 'HIGH'
+      ? '🚨'
+      : alert.riskLevel === 'WARNING' || alert.riskLevel === 'MEDIUM'
+        ? '⚠️'
+        : 'ℹ️';
+
+    const details: string[] = [
+      `${riskEmoji} SMPMS ALERT`,
+      '',
+      `Risk Level: ${alert.riskLevel}`,
+      `Node: ${alert.nodeId}`,
+      `Location: ${alert.location ?? 'Unknown location'}`,
+      `Pressure: ${alert.pressureBar !== undefined ? `${alert.pressureBar.toFixed(2)} BAR` : 'N/A'}`,
+      '',
+      `Alert: ${alert.message}`,
+      `Recommended Action: ${alert.recommendedAction ?? 'Inspect node and stabilize pressure'}`,
+    ];
+
+    if (alert.recommendedValvePosition !== undefined) {
+      details.push(`Recommended Valve Position: ${Math.round(alert.recommendedValvePosition)}%`);
+    }
+
+    if (alert.recommendations && alert.recommendations.length > 0) {
+      details.push('');
+      details.push('Recommended Points:');
+      for (const rec of alert.recommendations) {
+        details.push(`- ${rec}`);
+      }
+    }
+
+    details.push('');
+    details.push(`Time: ${new Date().toISOString()}`);
+
+    const message = details.join('\n');
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'Markdown' });
+      await telegramBot.sendMessage(config.telegramChatId, message);
       console.log(`[Telegram] Alert sent for node ${alert.nodeId}`);
       return true;
     } catch (err) {
