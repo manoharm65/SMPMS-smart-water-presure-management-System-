@@ -207,6 +207,80 @@ export class TelegramService {
       return false;
     }
   }
+
+  async sendOverrideSafetyWarning(payload: {
+    nodeId: string;
+    criticalCount: number;
+    pressure: number;
+    remainingReadings: number;
+  }): Promise<boolean> {
+    const telegramBot = getBot();
+
+    if (!telegramBot) {
+      console.log('[Telegram] Bot not configured. Skipping override safety warning.');
+      return false;
+    }
+
+    const message = `⚠️ <b>OVERRIDE SAFETY WARNING</b>
+
+<b>Node:</b> ${payload.nodeId}
+<b>Status:</b> ${payload.criticalCount} consecutive CRITICAL readings while in override mode
+<b>Current Pressure:</b> ${payload.pressure.toFixed(2)} BAR
+
+<b>Action Required:</b> The system detected prolonged critical conditions under manual override.
+
+If no changes are made in the next <b>${payload.remainingReadings} telemetry readings</b>, the system will automatically revert to AUTO mode for safety.
+
+<b>Options:</b>
+- Adjust override valve position if needed
+- Switch to AUTO mode to let the system handle it
+- No action: system will auto-revert after ${payload.remainingReadings} more readings
+
+<b>Time:</b> ${new Date().toISOString()}`;
+
+    try {
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      console.log(`[Telegram] Override safety warning sent for node ${payload.nodeId}`);
+      return true;
+    } catch (err) {
+      console.error('[Telegram] Failed to send override safety warning:', err);
+      return false;
+    }
+  }
+
+  async sendOverrideAutoRevertNotification(payload: {
+    nodeId: string;
+    criticalCount: number;
+    pressure: number;
+  }): Promise<boolean> {
+    const telegramBot = getBot();
+
+    if (!telegramBot) {
+      console.log('[Telegram] Bot not configured. Skipping override auto-revert notification.');
+      return false;
+    }
+
+    const message = `🔴 <b>OVERRIDE AUTO-REVERTED</b>
+
+<b>Node:</b> ${payload.nodeId}
+<b>Reason:</b> ${payload.criticalCount} consecutive CRITICAL readings detected while in override mode
+<b>Current Pressure:</b> ${payload.pressure.toFixed(2)} BAR
+
+<b>Action Taken:</b> System has automatically reverted to AUTO mode for safety.
+
+The automatic control system will now manage the valve position based on current conditions.
+
+<b>Time:</b> ${new Date().toISOString()}`;
+
+    try {
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      console.log(`[Telegram] Override auto-revert notification sent for node ${payload.nodeId}`);
+      return true;
+    } catch (err) {
+      console.error('[Telegram] Failed to send override auto-revert notification:', err);
+      return false;
+    }
+  }
 }
 
 export const telegramService = new TelegramService();

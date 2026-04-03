@@ -17,9 +17,20 @@ export async function initDatabase(): Promise<SqlJsDatabase> {
   loadEnv();
   dbPath = config.sqliteDbPath;
 
-  // Ensure data directory exists
-  const dataDir = join(__dirname, '../../data');
-  mkdirSync(dataDir, { recursive: true });
+  // Resolve to absolute path and ensure directory exists
+  let dbDir: string;
+  if (join(dbPath).startsWith('/')) {
+    // Absolute path (Render/production)
+    dbDir = dirname(dbPath);
+  } else {
+    // Relative path - resolve from project root
+    dbDir = join(process.cwd(), dirname(dbPath));
+  }
+  
+  if (!existsSync(dbDir)) {
+    mkdirSync(dbDir, { recursive: true });
+    console.log(`✅ Created data directory: ${dbDir}`);
+  }
 
   // Initialize SQL.js
   const SQL = await initSqlJs();
