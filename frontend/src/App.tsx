@@ -9,6 +9,7 @@ const Overview = lazy(() => import('./pages/Overview'))
 const ZoneDetail = lazy(() => import('./pages/ZoneDetail'))
 const Alerts = lazy(() => import('./pages/Alerts'))
 const Analytics = lazy(() => import('./pages/Analytics'))
+const MlSimulation = lazy(() => import('./pages/MlSimulation'))
 const About = lazy(() => import('./pages/About'))
 const Login = lazy(() => import('./pages/Login'))
 
@@ -29,6 +30,7 @@ function App() {
                 <Route path="/zones/:zoneId" element={<ZoneDetail />} />
                 <Route path="/alerts" element={<Alerts />} />
                 <Route path="/analytics" element={<Analytics />} />
+                <Route path="/ml-simulation" element={<MlSimulation />} />
                 <Route path="/about" element={<About />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

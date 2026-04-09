@@ -1,0 +1,2 @@
+scenario,pressure,flow_rate,supply_on,control_action,unexplained_pressure_drop,anomaly_flag,anomaly_score,anomaly_threshold,predicted_possible_problem,possible_problem_if_condition_persists,ml_model_message,top3_probable_problems
+erratic_pressure_sensor_issue,4.3,27.0,1,0,0,0,0.4927640696210263,0.5316117244259586,normal,normal,Anomaly=NO | Likely problem now: normal | If condition persists: normal,normal:0.96 | valve_fault:0.02 | old_pipe_degradation:0.01

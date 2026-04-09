@@ -258,6 +258,29 @@ ip addr show
 ifconfig
 ```
 
+---
+
+## Leakage Detection AI Model
+
+A ready-to-run ML baseline is now available in `backend/ml`.
+
+It includes:
+
+- anomaly detection for unexplained pressure changes
+- root-cause prediction (leak, burst, valve/sensor fault, construction damage, old pipe degradation)
+- training and prediction scripts
+- complete implementation guide in `backend/ml/README.md`
+
+Quick commands:
+
+```bash
+cd backend/ml
+pip install -r requirements.txt
+python generate_synthetic_dataset.py --out data/synthetic_training_data.csv
+python train.py --data data/synthetic_training_data.csv --out artifacts/leakage_model.joblib
+python predict.py --model artifacts/leakage_model.joblib --data data/synthetic_training_data.csv --out artifacts/predictions.csv
+```
+
 Look for `inet` under your active network interface (e.g., `en0`, `wlan0`).
 
 Example output:

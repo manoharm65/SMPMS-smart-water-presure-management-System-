@@ -1,11 +1,11 @@
 import { Router, Response } from 'express';
 import { alertService } from './alert.service.js';
-import { authMiddleware, AuthenticatedRequest } from '../auth/auth.middleware.js';
+import { AuthenticatedRequest } from '../auth/auth.middleware.js';
 
 const router = Router();
 
 // GET /alerts
-router.get('/', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
+router.get('/', (req: AuthenticatedRequest, res: Response): void => {
   const { limit, offset, unacknowledged } = req.query;
   const alerts = alertService.findAll(
     limit ? parseInt(limit as string, 10) : 100,
@@ -17,7 +17,7 @@ router.get('/', authMiddleware, (req: AuthenticatedRequest, res: Response): void
 });
 
 // GET /alerts/:nodeId
-router.get('/:nodeId', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
+router.get('/:nodeId', (req: AuthenticatedRequest, res: Response): void => {
   const { nodeId } = req.params;
   const { limit } = req.query;
   const alerts = alertService.findByNodeId(nodeId, limit ? parseInt(limit as string, 10) : 50);
@@ -25,7 +25,7 @@ router.get('/:nodeId', authMiddleware, (req: AuthenticatedRequest, res: Response
 });
 
 // PATCH /alerts/:id/acknowledge
-router.patch('/:id/acknowledge', authMiddleware, (req: AuthenticatedRequest, res: Response): void => {
+router.patch('/:id/acknowledge', (req: AuthenticatedRequest, res: Response): void => {
   const { id } = req.params;
   const acknowledgedBy = (req.user as any)?.username ?? 'operator';
   const updated = alertService.acknowledge(id, acknowledgedBy);

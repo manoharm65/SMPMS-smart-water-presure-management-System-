@@ -6,6 +6,7 @@ const navItems = [
   { to: '/overview', label: 'OVERVIEW' },
   { to: '/alerts', label: 'ALERTS' },
   { to: '/analytics', label: 'ANALYTICS' },
+  { to: '/ml-simulation', label: 'ML SIM' },
 ]
 
 export default function Sidebar() {

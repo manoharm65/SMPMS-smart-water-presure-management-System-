@@ -16,6 +16,8 @@ export type MapDataConfig = {
   zonesUrl: string
   pipelinesUrl: string
   valvesUrl: string
+  maxPipelines?: number
+  maxValves?: number
 }
 
 export type LoadedMapData = {
@@ -58,6 +60,106 @@ function getRequiredId(
 
   if (typeof feature.id === 'string' && feature.id.trim()) return feature.id.trim()
   return fallback
+}
+
+function clampLimit(value: number | undefined, maxDefault: number): number {
+  if (!value || !Number.isFinite(value) || value <= 0) return maxDefault
+  return Math.floor(value)
+}
+
+function sampleFeatures<T extends Geometry>(
+  fc: FeatureCollection<T, GeoJsonProperties>,
+  maxFeatures?: number,
+): FeatureCollection<T, GeoJsonProperties> {
+  if (!maxFeatures || fc.features.length <= maxFeatures) return fc
+  const step = Math.max(1, Math.ceil(fc.features.length / maxFeatures))
+  const sampled = fc.features.filter((_, idx) => idx % step === 0).slice(0, maxFeatures)
+  return {
+    type: 'FeatureCollection',
+    features: sampled,
+  }
+}
+
+function buildFallbackZoneFromNetwork(
+  pipelines: PipelineSegment[],
+  valves: Valve[],
+): ZoneGeo[] {
+  const points: LatLngTuple[] = []
+  for (const p of pipelines) {
+    if (p.path.length > 0) {
+      points.push(p.path[0])
+      points.push(p.path[p.path.length - 1])
+    }
+  }
+  for (const v of valves) points.push(v.position)
+
+  if (points.length === 0) return []
+
+  let minLat = Infinity
+  let maxLat = -Infinity
+  let minLng = Infinity
+  let maxLng = -Infinity
+  for (const [lat, lng] of points) {
+    if (lat < minLat) minLat = lat
+    if (lat > maxLat) maxLat = lat
+    if (lng < minLng) minLng = lng
+    if (lng > maxLng) maxLng = lng
+  }
+
+  if (!Number.isFinite(minLat) || !Number.isFinite(minLng)) return []
+
+  const padLat = Math.max(0.002, (maxLat - minLat) * 0.08)
+  const padLng = Math.max(0.002, (maxLng - minLng) * 0.08)
+
+  const polygon: LatLngTuple[] = [
+    [minLat - padLat, minLng - padLng],
+    [minLat - padLat, maxLng + padLng],
+    [maxLat + padLat, maxLng + padLng],
+    [maxLat + padLat, minLng - padLng],
+    [minLat - padLat, minLng - padLng],
+  ]
+
+  return [
+    {
+      id: 'SOLAPUR-NETWORK',
+      name: 'Solapur Water Network',
+      points: polygon,
+      centroid: centroidOfLatLng(polygon),
+    },
+  ]
+}
+
+function filterValvesNearPipelines(pipelines: PipelineSegment[], valves: Valve[]): Valve[] {
+  if (pipelines.length === 0 || valves.length === 0) return valves
+
+  let minLat = Infinity
+  let maxLat = -Infinity
+  let minLng = Infinity
+  let maxLng = -Infinity
+
+  for (const p of pipelines) {
+    for (const [lat, lng] of p.path) {
+      if (lat < minLat) minLat = lat
+      if (lat > maxLat) maxLat = lat
+      if (lng < minLng) minLng = lng
+      if (lng > maxLng) maxLng = lng
+    }
+  }
+
+  if (!Number.isFinite(minLat) || !Number.isFinite(minLng)) return valves
+
+  const latPad = Math.max(0.05, (maxLat - minLat) * 0.2)
+  const lngPad = Math.max(0.05, (maxLng - minLng) * 0.2)
+
+  return valves.filter((v) => {
+    const [lat, lng] = v.position
+    return (
+      lat >= minLat - latPad
+      && lat <= maxLat + latPad
+      && lng >= minLng - lngPad
+      && lng <= maxLng + lngPad
+    )
+  })
 }
 
 async function fetchGeoJSON<T extends Geometry>(url: string) {
@@ -143,9 +245,24 @@ export async function loadMapData(cfg: MapDataConfig): Promise<LoadedMapData> {
     fetchGeoJSON<Point>(cfg.valvesUrl),
   ])
 
+  const sampledPipelinesFc = sampleFeatures(
+    pipelinesFc,
+    clampLimit(cfg.maxPipelines, 25000),
+  )
+  const sampledValvesFc = sampleFeatures(
+    valvesFc,
+    clampLimit(cfg.maxValves, 25000),
+  )
+
+  const pipelines = parsePipelines(sampledPipelinesFc)
+  const valvesRaw = parseValves(sampledValvesFc)
+  const valves = filterValvesNearPipelines(pipelines, valvesRaw)
+  const parsedZones = parseZones(zonesFc)
+  const zonesGeo = parsedZones.length > 0 ? parsedZones : buildFallbackZoneFromNetwork(pipelines, valves)
+
   return {
-    zonesGeo: parseZones(zonesFc),
-    pipelines: parsePipelines(pipelinesFc),
-    valves: parseValves(valvesFc),
+    zonesGeo,
+    pipelines,
+    valves,
   }
 }

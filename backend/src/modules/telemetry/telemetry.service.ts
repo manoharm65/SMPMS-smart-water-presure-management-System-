@@ -7,6 +7,45 @@ import { Telemetry, Command } from '../../types/index.js';
 import { config } from '../../core/config.js';
 
 export class TelemetryService {
+  private statusMonitorInterval: ReturnType<typeof setInterval> | null = null;
+  private offlineAlertedNodes = new Set<string>();
+
+  constructor() {
+    this.startStatusMonitor();
+  }
+
+  private startStatusMonitor(): void {
+    const intervalMs = Math.max(config.telemetryIntervalMs, 10000);
+    this.statusMonitorInterval = setInterval(() => {
+      this.checkAllNodesStatusAndNotify();
+    }, intervalMs);
+    console.log(`[TelemetryService] Node status monitor started (interval: ${intervalMs}ms)`);
+  }
+
+  private checkAllNodesStatusAndNotify(): void {
+    const nodes = nodeRepository.findAll();
+
+    for (const node of nodes) {
+      const currentStatus = nodeRepository.checkNodeStatus(node.nodeId, config.telemetryIntervalMs);
+
+      if (currentStatus === 'offline') {
+        if (this.offlineAlertedNodes.has(node.nodeId)) {
+          continue;
+        }
+
+        this.offlineAlertedNodes.add(node.nodeId);
+        const location = node.location ? ` (${node.location})` : '';
+        eventBus.emitAlertTriggered({
+          nodeId: node.nodeId,
+          message: `ESP node is not connected${location}. Telemetry not received within expected interval.`,
+          riskLevel: 'WARNING',
+        });
+      } else {
+        this.offlineAlertedNodes.delete(node.nodeId);
+      }
+    }
+  }
+
   async create(dto: CreateTelemetryDto): Promise<{ telemetry: Telemetry; command?: Command }> {
     // Check if node exists
     const node = nodeRepository.findByNodeId(dto.nodeId);
@@ -81,6 +120,7 @@ export class TelemetryService {
 
     // Update node last_seen and set status to online
     nodeRepository.updateStatusAndLastSeen(dto.nodeId, 'online', dto.timestamp);
+    this.offlineAlertedNodes.delete(dto.nodeId);
 
     // Emit telemetry received event
     const payload: TelemetryPayload = {
@@ -128,6 +168,7 @@ export class TelemetryService {
     if (dto.readings.length > 0) {
       const latestReading = dto.readings[dto.readings.length - 1];
       nodeRepository.updateStatusAndLastSeen(dto.nodeId, 'online', latestReading.timestamp);
+      this.offlineAlertedNodes.delete(dto.nodeId);
     }
 
     console.log(`[Telemetry] Synced ${synced} buffered readings for node ${dto.nodeId}`);
@@ -138,6 +179,13 @@ export class TelemetryService {
     const nodes = nodeRepository.findAll();
     for (const node of nodes) {
       nodeRepository.checkNodeStatus(node.nodeId, config.telemetryIntervalMs);
+    }
+  }
+
+  shutdown(): void {
+    if (this.statusMonitorInterval) {
+      clearInterval(this.statusMonitorInterval);
+      this.statusMonitorInterval = null;
     }
   }
 
