@@ -40,37 +40,31 @@ export class TelegramService {
         ? '⚠️'
         : 'ℹ️';
 
-    const details: string[] = [
-      `${riskEmoji} SMPMS ALERT`,
-      '',
-      `Risk Level: ${alert.riskLevel}`,
-      `Node: ${alert.nodeId}`,
-      `Location: ${alert.location ?? 'Unknown location'}`,
-      `Pressure: ${alert.pressureBar !== undefined ? `${alert.pressureBar.toFixed(2)} BAR` : 'N/A'}`,
-      '',
-      `Alert: ${alert.message}`,
-      `Recommended Action: ${alert.recommendedAction ?? 'Inspect node and stabilize pressure'}`,
-    ];
+    let message = `${riskEmoji} <b>SMPMS ALERT</b>
+
+<b>Risk Level:</b> ${alert.riskLevel}
+<b>Node:</b> ${alert.nodeId}
+<b>Location:</b> ${alert.location ?? 'Unknown location'}
+<b>Pressure:</b> ${alert.pressureBar !== undefined ? `${alert.pressureBar.toFixed(2)} BAR` : 'N/A'}
+
+<b>Alert:</b> ${alert.message}
+<b>Recommended Action:</b> ${alert.recommendedAction ?? 'Inspect node and stabilize pressure'}`;
 
     if (alert.recommendedValvePosition !== undefined) {
-      details.push(`Recommended Valve Position: ${Math.round(alert.recommendedValvePosition)}%`);
+      message += `\n<b>Recommended Valve Position:</b> ${Math.round(alert.recommendedValvePosition)}%`;
     }
 
     if (alert.recommendations && alert.recommendations.length > 0) {
-      details.push('');
-      details.push('Recommended Points:');
+      message += '\n\n<b>Recommended Points:</b>';
       for (const rec of alert.recommendations) {
-        details.push(`- ${rec}`);
+        message += `\n- ${rec}`;
       }
     }
 
-    details.push('');
-    details.push(`Time: ${new Date().toISOString()}`);
-
-    const message = details.join('\n');
+    message += `\n\n<b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message);
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
       console.log(`[Telegram] Alert sent for node ${alert.nodeId}`);
       return true;
     } catch (err) {
@@ -86,10 +80,14 @@ export class TelegramService {
       return false;
     }
 
-    const message = `📡 *Command Dispatched*\n\nNode: ${command.nodeId}\nCommand: ${command.command}\nTime: ${new Date().toISOString()}`;
+    const message = `📡 <b>Command Dispatched</b>
+
+<b>Node:</b> ${command.nodeId}
+<b>Command:</b> ${command.command}
+<b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'Markdown' });
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
       return true;
     } catch (err) {
       console.error('[Telegram] Failed to send command notification:', err);
@@ -110,10 +108,16 @@ export class TelegramService {
       return false;
     }
 
-    const message = `🔴 *CRITICAL: Valve command sent to ${payload.nodeId}*\n\nAction: ${payload.command} → target ${payload.targetPosition}%\nPressure: ${payload.pressure} BAR\n\nTime: ${new Date().toISOString()}`;
+    const message = `🔴 <b>CRITICAL: Valve command sent to ${payload.nodeId}</b>
+
+<b>Action:</b> ${payload.command}
+<b>Target:</b> ${payload.targetPosition}%
+<b>Pressure:</b> ${payload.pressure} BAR
+
+<b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'Markdown' });
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
       console.log(`[Telegram] Critical command notification sent for node ${payload.nodeId}`);
       return true;
     } catch (err) {
@@ -133,10 +137,14 @@ export class TelegramService {
       return false;
     }
 
-    const message = `⚠️ *WARNING: Valve command timeout — ${payload.nodeId} not responding*\n\nCommand ID: ${payload.commandId}\nTime: ${new Date().toISOString()}`;
+    const message = `⚠️ <b>WARNING: Valve command timeout</b>
+
+<b>Node:</b> ${payload.nodeId} not responding
+<b>Command ID:</b> ${payload.commandId}
+<b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'Markdown' });
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
       console.log(`[Telegram] Timeout notification sent for node ${payload.nodeId}`);
       return true;
     } catch (err) {
@@ -156,10 +164,14 @@ export class TelegramService {
       return false;
     }
 
-    const message = `⚠️ *Override cancelled on ${payload.nodeId} — Critical pressure detected (${payload.pressure} BAR). Auto control resumed.*\n\nTime: ${new Date().toISOString()}`;
+    const message = `⚠️ <b>Override cancelled on ${payload.nodeId}</b>
+
+<b>Reason:</b> Critical pressure detected (${payload.pressure} BAR)
+<b>Status:</b> Auto control resumed
+<b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'Markdown' });
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
       console.log(`[Telegram] Override auto-cancelled notification sent for node ${payload.nodeId}`);
       return true;
     } catch (err) {
@@ -181,14 +193,91 @@ export class TelegramService {
     }
 
     const operatorText = payload.operator ? ` by ${payload.operator}` : '';
-    const message = `🔧 *Manual override on ${payload.nodeId} — valve set to ${payload.targetPosition}%${operatorText}*\n\nTime: ${new Date().toISOString()}`;
+    const message = `🔧 <b>Manual override on ${payload.nodeId}</b>
+
+<b>Valve set to:</b> ${payload.targetPosition}%${operatorText}
+<b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'Markdown' });
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
       console.log(`[Telegram] Manual override notification sent for node ${payload.nodeId}`);
       return true;
     } catch (err) {
       console.error('[Telegram] Failed to send manual override notification:', err);
+      return false;
+    }
+  }
+
+  async sendOverrideSafetyWarning(payload: {
+    nodeId: string;
+    criticalCount: number;
+    pressure: number;
+    remainingReadings: number;
+  }): Promise<boolean> {
+    const telegramBot = getBot();
+
+    if (!telegramBot) {
+      console.log('[Telegram] Bot not configured. Skipping override safety warning.');
+      return false;
+    }
+
+    const message = `⚠️ <b>OVERRIDE SAFETY WARNING</b>
+
+<b>Node:</b> ${payload.nodeId}
+<b>Status:</b> ${payload.criticalCount} consecutive CRITICAL readings while in override mode
+<b>Current Pressure:</b> ${payload.pressure.toFixed(2)} BAR
+
+<b>Action Required:</b> The system detected prolonged critical conditions under manual override.
+
+If no changes are made in the next <b>${payload.remainingReadings} telemetry readings</b>, the system will automatically revert to AUTO mode for safety.
+
+<b>Options:</b>
+- Adjust override valve position if needed
+- Switch to AUTO mode to let the system handle it
+- No action: system will auto-revert after ${payload.remainingReadings} more readings
+
+<b>Time:</b> ${new Date().toISOString()}`;
+
+    try {
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      console.log(`[Telegram] Override safety warning sent for node ${payload.nodeId}`);
+      return true;
+    } catch (err) {
+      console.error('[Telegram] Failed to send override safety warning:', err);
+      return false;
+    }
+  }
+
+  async sendOverrideAutoRevertNotification(payload: {
+    nodeId: string;
+    criticalCount: number;
+    pressure: number;
+  }): Promise<boolean> {
+    const telegramBot = getBot();
+
+    if (!telegramBot) {
+      console.log('[Telegram] Bot not configured. Skipping override auto-revert notification.');
+      return false;
+    }
+
+    const message = `🔴 <b>OVERRIDE AUTO-REVERTED</b>
+
+<b>Node:</b> ${payload.nodeId}
+<b>Reason:</b> ${payload.criticalCount} consecutive CRITICAL readings detected while in override mode
+<b>Current Pressure:</b> ${payload.pressure.toFixed(2)} BAR
+
+<b>Action Taken:</b> System has automatically reverted to AUTO mode for safety.
+
+The automatic control system will now manage the valve position based on current conditions.
+
+<b>Time:</b> ${new Date().toISOString()}`;
+
+    try {
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      console.log(`[Telegram] Override auto-revert notification sent for node ${payload.nodeId}`);
+      return true;
+    } catch (err) {
+      console.error('[Telegram] Failed to send override auto-revert notification:', err);
       return false;
     }
   }

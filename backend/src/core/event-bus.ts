@@ -118,7 +118,7 @@ export interface ValveModePayload {
   nodeId: string;
   previousMode: ValveMode;
   newMode: ValveMode;
-  reason: 'operator' | 'critical_auto_revert';
+  reason: 'operator' | 'critical_auto_revert' | 'safety_auto_revert';
   pressure?: number;
 }
 

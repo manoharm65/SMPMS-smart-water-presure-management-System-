@@ -17,9 +17,20 @@ export async function initDatabase(): Promise<SqlJsDatabase> {
   loadEnv();
   dbPath = config.sqliteDbPath;
 
-  // Ensure data directory exists
-  const dataDir = join(__dirname, '../../data');
-  mkdirSync(dataDir, { recursive: true });
+  // Resolve to absolute path and ensure directory exists
+  let dbDir: string;
+  if (join(dbPath).startsWith('/')) {
+    // Absolute path (Render/production)
+    dbDir = dirname(dbPath);
+  } else {
+    // Relative path - resolve from project root
+    dbDir = join(process.cwd(), dirname(dbPath));
+  }
+  
+  if (!existsSync(dbDir)) {
+    mkdirSync(dbDir, { recursive: true });
+    console.log(`✅ Created data directory: ${dbDir}`);
+  }
 
   // Initialize SQL.js
   const SQL = await initSqlJs();
@@ -130,11 +141,7 @@ async function seedDefaultData(database: SqlJsDatabase): Promise<void> {
 
   // Create default DMA nodes if not exist
   const defaultNodes = [
-    { nodeId: 'DMA_01', name: 'District Meter Area 1', location: 'Zone A' },
-    { nodeId: 'DMA_02', name: 'District Meter Area 2', location: 'Zone B' },
-    { nodeId: 'DMA_03', name: 'District Meter Area 3', location: 'Zone C' },
-    { nodeId: 'DMA_04', name: 'District Meter Area 4', location: 'Zone D' },
-    { nodeId: 'DMA_05', name: 'District Meter Area 5', location: 'Zone E' },
+    { nodeId: 'DMA_999', name: 'District Meter Area 1', location: 'Zone A' },
   ];
 
   for (const node of defaultNodes) {

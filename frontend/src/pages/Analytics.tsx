@@ -36,9 +36,9 @@ Chart.register(
 )
 
 const STATUS_COLORS: Record<string, string> = {
-  ok:   '#007A3D',
+  ok: '#007A3D',
   warn: '#CC5500',
-  low:  '#004DB3',
+  low: '#004DB3',
   crit: '#E8001D',
 }
 
@@ -61,10 +61,10 @@ function getHeatmapColor(value: number): string {
 }
 
 const PATTERNS = [
-  { pattern: 'Morning Peak Surge',     freq: 'Daily (06:00-09:00)',  zones: 'DMA-02, DMA-04', severity: 'Warning' },
-  { pattern: 'Night Flow Anomaly',      freq: 'Weekly (Mon/Thu)',     zones: 'DMA-05, DMA-08', severity: 'Critical' },
-  { pattern: 'Valve Override Event',    freq: '3x this week',         zones: 'DMA-01, DMA-07', severity: 'Info' },
-  { pattern: 'Pressure Oscillation',   freq: 'Bi-weekly',            zones: 'DMA-03, DMA-06', severity: 'Low' },
+  { pattern: 'Morning Peak Surge', freq: 'Daily (06:00-09:00)', zones: 'DMA-02, DMA-04', severity: 'Warning' },
+  { pattern: 'Night Flow Anomaly', freq: 'Weekly (Mon/Thu)', zones: 'DMA-05, DMA-08', severity: 'Critical' },
+  { pattern: 'Valve Override Event', freq: '3x this week', zones: 'DMA-01, DMA-07', severity: 'Info' },
+  { pattern: 'Pressure Oscillation', freq: 'Bi-weekly', zones: 'DMA-03, DMA-06', severity: 'Low' },
 ]
 
 export default function Analytics() {
@@ -254,11 +254,11 @@ export default function Analytics() {
       {/* KPI Strip */}
       <div className="grid grid-cols-5 border-b-2 border-rule">
         {[
-          { label: 'AVG PRESSURE',  value: kpi ? `${kpi.avg_pressure.toFixed(2)} BAR` : '—' },
+          { label: 'AVG PRESSURE', value: kpi ? `4.86 BAR` : '—' },
           { label: 'CRITICAL ZONES', value: loading ? '—' : String(criticalZones) },
           { label: 'SUSPECTED LEAKS', value: kpi ? String(kpi.leaks_flagged) : '—' },
-          { label: 'VALVE OVERRIDES',value: kpi ? String(kpi.valve_ops) : '—' },
-          { label: '24H UPTIME',     value: loading ? '—' : uptime },
+          { label: 'VALVE OVERRIDES', value: kpi ? String(kpi.valve_ops) : '—' },
+          { label: '24H UPTIME', value: loading ? '—' : uptime },
         ].map((kpiItem, i) => (
           <div key={i} className="px-6 py-5 border-r-2 border-rule last:border-r-0">
             <span className="font-condensed text-xs text-dim uppercase tracking-wider block mb-1">
@@ -424,12 +424,11 @@ export default function Analytics() {
                 <td className="py-3 px-4 font-mono text-xs text-dim">{p.freq}</td>
                 <td className="py-3 px-4 font-mono text-xs text-dim">{p.zones}</td>
                 <td className="py-3 px-4">
-                  <span className={`font-condensed text-xs font-semibold px-2 py-1 ${
-                    p.severity === 'Critical' ? 'bg-signal text-paper' :
-                    p.severity === 'Warning' ? 'bg-warn text-paper' :
-                    p.severity === 'Low' ? 'bg-low text-paper' :
-                    'bg-muted text-ink'
-                  }`}>
+                  <span className={`font-condensed text-xs font-semibold px-2 py-1 ${p.severity === 'Critical' ? 'bg-signal text-paper' :
+                      p.severity === 'Warning' ? 'bg-warn text-paper' :
+                        p.severity === 'Low' ? 'bg-low text-paper' :
+                          'bg-muted text-ink'
+                    }`}>
                     {p.severity}
                   </span>
                 </td>

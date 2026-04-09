@@ -44,18 +44,14 @@ CREATE TABLE IF NOT EXISTS decisions (
   risk_level TEXT NOT NULL,
   action TEXT NOT NULL,
   requires_alert INTEGER NOT NULL,
+  confidence REAL DEFAULT 0.5,
+  reason TEXT DEFAULT '',
+  recommended_valve_position INTEGER DEFAULT 0,
+  alert_severity TEXT DEFAULT 'ok',
   engine TEXT DEFAULT 'rule',
   created_at TEXT DEFAULT (datetime('now')),
   FOREIGN KEY (node_id) REFERENCES nodes(node_id)
 );
-
--- For each column, use a transaction + exception approach that SQLite sql.js handles
--- These ALTER statements run on every start but are only applied if the column is new
-
-ALTER TABLE decisions ADD COLUMN confidence REAL DEFAULT 0.5;
-ALTER TABLE decisions ADD COLUMN reason TEXT DEFAULT '';
-ALTER TABLE decisions ADD COLUMN recommended_valve_position INTEGER DEFAULT 0;
-ALTER TABLE decisions ADD COLUMN alert_severity TEXT DEFAULT 'ok';
 
 CREATE TABLE IF NOT EXISTS alerts (
   id TEXT PRIMARY KEY,

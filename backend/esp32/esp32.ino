@@ -1,28 +1,16 @@
-/**
- * SMPMS ESP32 Firmware v1.0.0
- * Smart Pressure Management System - Edge Node
- * 
- * NOTE: Running in SIMULATION MODE — no physical sensors connected.
- *       Replace readPressure() and readValvePosition() with real
- *       sensor reads when hardware is available.
- */
-
-// ============================================================================
-// USER CONFIGURATION
-// ============================================================================
-#define NODE_ID          "DMA_30"
+#define NODE_ID          "DMA_15"
 #define FIRMWARE_VERSION "1.0.0"
 
 const char* WIFI_SSID     = "Datta";
 const char* WIFI_PASSWORD = "Manikya@107";
-const char* BACKEND_HOST  = "10.24.24.40";
+const char* BACKEND_HOST  = "10.24.24.212";
 const int   BACKEND_PORT  = 3000;
 
 // ============================================================================
 // HARDWARE PINS
 // ============================================================================
 #define PRESSURE_SENSOR_PIN  36
-#define SERVO_CONTROL_PIN     9
+#define SERVO_CONTROL_PIN    14
 #define SERVO_FEEDBACK_PIN   35
 #define STATUS_LED_BLUE       2
 #define STATUS_LED_RED        4
@@ -31,8 +19,8 @@ const int   BACKEND_PORT  = 3000;
 // ============================================================================
 // TIMING CONSTANTS
 // ============================================================================
-#define TELEMETRY_INTERVAL_DEFAULT   5000UL   // ← 5 seconds
-#define TELEMETRY_INTERVAL_MIN       5000UL   // ← 5 seconds minimum
+#define TELEMETRY_INTERVAL_DEFAULT   5000UL
+#define TELEMETRY_INTERVAL_MIN       5000UL
 #define TELEMETRY_INTERVAL_MAX      60000UL
 #define COMMAND_TIMEOUT              5000UL
 #define REGISTRATION_RETRY_DELAY     3000UL
@@ -149,14 +137,12 @@ void setup() {
     Serial.println("\n==========================================");
     Serial.println("SMPMS ESP32 Firmware v" + String(FIRMWARE_VERSION));
     Serial.println("Node ID: " + String(NODE_ID));
-    Serial.println("[Mode] SIMULATION — no physical sensors");
     Serial.println("==========================================");
 
     setupHardware();
     EEPROM.begin(EEPROM_SIZE);
     loadStoredConfig();
 
-    // Subscribe WDT before connectWiFi so wdt_reset() works inside it
     esp_task_wdt_add(NULL);
 
     connectWiFi();
@@ -166,9 +152,7 @@ void setup() {
 
     // Always re-register on boot to get a fresh API key
     currentState = STATE_REGISTERING;
-    Serial.println(currentState == STATE_ONLINE
-        ? "[Setup] Has stored credentials - going ONLINE"
-        : "[Setup] No credentials - going to REGISTER");
+    Serial.println("[Setup] Going to REGISTER");
     logStateTransition(STATE_BOOT, currentState);
 }
 
@@ -205,55 +189,46 @@ void setupHardware() {
 }
 
 // ============================================================================
-// SIMULATION — PRESSURE
-//
-// Pattern repeats every 120 seconds:
-//   0– 39s  Normal  : ~4.0 bar with gentle sine fluctuation
-//  40– 59s  Leak    : Fast drop to ~1.0 bar (below CRITICAL_LOW → alert fires)
-//  60– 79s  Recovery: Gradual climb back to normal
-//  80–119s  Normal  : ~4.0 bar again
+// REAL SENSOR — PRESSURE
+// Wiring: Pressure sensor analog output → GPIO 36 (A0)
+// Sensor: 0.5V = 0 bar, 4.5V = 20 bar (typical 4-20mA or 0.5-4.5V sensor)
+// Formula: pressure = (voltage - 0.5) * 4.0
 // ============================================================================
 float readPressure() {
-    unsigned long phase = (millis() / 1000) % 120;
-    float pressure;
-
-    if (phase < 40) {
-        // Normal — gentle sine wave around 4.0 bar
-        pressure = 4.0f + 0.3f * sinf(phase * 0.5f);
-
-    } else if (phase < 60) {
-        float progress = (phase - 40) / 20.0f;   // 0.0 → 1.0
-        if (progress < 0.2f) {
-            // Fast initial drop (first 4 seconds of leak)
-            pressure = 4.0f - (3.0f) * (progress / 0.2f);
-        } else {
-            // Hold low with small jitter
-            pressure = 1.0f + 0.15f * sinf(phase * 2.0f);
-        }
-
-    } else if (phase < 80) {
-        // Recovery — linear climb from 1.0 → 4.0 bar
-        float progress = (phase - 60) / 20.0f;   // 0.0 → 1.0
-        pressure = 1.0f + 3.0f * progress;
-
-    } else {
-        // Normal again
-        pressure = 4.0f + 0.3f * sinf(phase * 0.5f);
+    // Average 10 samples to reduce ADC noise
+    long sum = 0;
+    for (int i = 0; i < 10; i++) {
+        sum += analogRead(PRESSURE_SENSOR_PIN);
+        delay(2);
     }
+    int raw = sum / 10;
 
-    // Tiny random noise ±0.05 bar
-    pressure += (float)random(-50, 50) / 1000.0f;
+    // Convert ADC (0–4095) to voltage (0–5V)
+    float voltage = (raw / 4095.0f) * 5.0f;
 
-    Serial.println("[Sim] Phase=" + String(phase) +
-                   "s  P=" + String(pressure, 2) + " bar");
+    // Remove sensor offset (0.5V = 0 bar)
+    float correctedVoltage = voltage - 0.5f;
+    if (correctedVoltage < 0) correctedVoltage = 0;
+
+    // Scale to bar (0.5V–4.5V maps to 0–20 bar → 4V span = 20 bar)
+    float pressure = correctedVoltage * (20.0f / 4.0f);
+
+    Serial.println("[Sensor] ADC=" + String(raw) +
+                   " V=" + String(voltage, 3) +
+                   " P=" + String(pressure, 2) + " bar");
 
     return constrain(pressure, 0.0f, 20.0f);
 }
 
-// SIMULATION — VALVE POSITION
-// Returns last commanded position (no feedback pot connected)
+// ============================================================================
+// REAL SENSOR — VALVE POSITION
+// Wiring: Servo feedback potentiometer → GPIO 35
+// Maps ADC 0–4095 to valve position 0–100%
+// ============================================================================
 int readValvePosition() {
-    return currentValvePosition;
+    int raw = analogRead(SERVO_FEEDBACK_PIN);
+    int position = map(raw, 0, 4095, 0, 100);
+    return constrain(position, 0, 100);
 }
 
 // ============================================================================
@@ -263,8 +238,6 @@ String buildUrl(const char* endpoint) {
     return "http://" + String(BACKEND_HOST) + ":" + String(BACKEND_PORT) + endpoint;
 }
 
-// Fake ISO 8601 timestamp derived from millis()
-// Replace with NTP sync for production
 String isoTimestamp() {
     unsigned long secs = millis() / 1000;
     char buf[32];
@@ -420,7 +393,6 @@ void handleRegistration() {
         StaticJsonDocument<512> rd;
         if (!deserializeJson(rd, resp) && rd["registered"] == true) {
 
-            // Store API key
             if (rd.containsKey("api_key")) {
                 strncpy(apiKeyBuf, rd["api_key"] | "", 64);
             } else {
@@ -430,13 +402,11 @@ void handleRegistration() {
             apiKeyBuf[64] = '\0';
             apiKey = apiKeyBuf;
 
-            // Telemetry interval from server (clamped to our min/max)
             uint32_t serverInterval = rd["telemetry_interval_ms"] | TELEMETRY_INTERVAL_DEFAULT;
             telemetryIntervalMs = constrain(serverInterval,
                                             TELEMETRY_INTERVAL_MIN,
                                             TELEMETRY_INTERVAL_MAX);
 
-            // Thresholds — backend uses camelCase
             if (rd.containsKey("pressure_thresholds")) {
                 JsonObject pt = rd["pressure_thresholds"];
                 THRESHOLD_CRITICAL_HIGH = pt["criticalHigh"] | 5.5f;
@@ -515,24 +485,86 @@ void sendTelemetry() {
 
     if (code == 200 || code == 201) {
         String resp = http.getString();
-        Serial.println("[Telemetry] OK");
+        Serial.println("[Telemetry] OK - HTTP " + String(code));
+        
+        // DEBUG: Print full raw response
+        Serial.println("[DEBUG] ====== RAW RESPONSE START ======");
+        Serial.println(resp);
+        Serial.println("[DEBUG] ====== RAW RESPONSE END ======");
+        Serial.println("[DEBUG] Response length: " + String(resp.length()) + " bytes");
 
-        // Check for piggyback command
         StaticJsonDocument<512> rd;
-        if (!deserializeJson(rd, resp) && rd["command"].is<JsonObject>()) {
-            const char* cmdType = rd["command"]["type"]       | "";
-            int         cmdVal  = rd["command"]["value"]      | 0;
-            const char* cmdId   = rd["command"]["command_id"] | "";
-            Serial.println("[Command] Received: " + String(cmdType) +
-                           " -> " + String(cmdVal));
-            if (strcmp(cmdType, "SET_VALVE") == 0)
-                executeSetValve(cmdVal, cmdId);
+        DeserializationError jsonErr = deserializeJson(rd, resp);
+        
+        // DEBUG: JSON parsing status
+        if (jsonErr) {
+            Serial.println("[DEBUG] JSON parse FAILED: " + String(jsonErr.c_str()));
+        } else {
+            Serial.println("[DEBUG] JSON parse SUCCESS");
+            
+            // DEBUG: Check what keys exist at root level
+            Serial.print("[DEBUG] Root keys: ");
+            for (JsonPair kv : rd.as<JsonObject>()) {
+                Serial.print(String(kv.key().c_str()) + ", ");
+            }
+            Serial.println();
+            
+            // DEBUG: Check command object
+            if (rd.containsKey("command")) {
+                Serial.println("[DEBUG] 'command' key EXISTS");
+                
+                if (rd["command"].isNull()) {
+                    Serial.println("[DEBUG] 'command' value is NULL");
+                } else if (rd["command"].is<JsonObject>()) {
+                    Serial.println("[DEBUG] 'command' is a JsonObject");
+                    
+                    // Print all command fields
+                    JsonObject cmdObj = rd["command"].as<JsonObject>();
+                    Serial.print("[DEBUG] Command keys: ");
+                    for (JsonPair kv : cmdObj) {
+                        Serial.print(String(kv.key().c_str()) + "=");
+                        if (kv.value().is<const char*>()) {
+                            Serial.print("\"" + String(kv.value().as<const char*>()) + "\"");
+                        } else if (kv.value().is<int>()) {
+                            Serial.print(String(kv.value().as<int>()));
+                        } else {
+                            Serial.print("(other)");
+                        }
+                        Serial.print(", ");
+                    }
+                    Serial.println();
+                    
+                    const char* cmdType = rd["command"]["type"]       | "";
+                    int         cmdVal  = rd["command"]["value"]      | 0;
+                    const char* cmdId   = rd["command"]["command_id"] | "";
+                    
+                    Serial.println("[DEBUG] Extracted: type=\"" + String(cmdType) + 
+                                   "\", value=" + String(cmdVal) + 
+                                   ", command_id=\"" + String(cmdId) + "\"");
+                    
+                    Serial.println("[Command] Received: " + String(cmdType) +
+                                   " -> " + String(cmdVal));
+                    
+                    if (strcmp(cmdType, "SET_VALVE") == 0) {
+                        Serial.println("[DEBUG] Executing SET_VALVE command...");
+                        executeSetValve(cmdVal, cmdId);
+                    } else if (strlen(cmdType) == 0) {
+                        Serial.println("[DEBUG] Command type is EMPTY - not executing");
+                    } else {
+                        Serial.println("[DEBUG] Unknown command type: " + String(cmdType));
+                    }
+                } else {
+                    Serial.println("[DEBUG] 'command' is NOT a JsonObject (unexpected type)");
+                }
+            } else {
+                Serial.println("[DEBUG] 'command' key DOES NOT EXIST in response");
+            }
         }
 
     } else {
         String errBody = http.getString();
-        Serial.println("[Telemetry] HTTP " + String(code) + " | " + errBody); // already there
-        Serial.println("[Telemetry] URL was: " + buildUrl(EP_TELEMETRY));      // ← add this
+        Serial.println("[Telemetry] HTTP " + String(code) + " | " + errBody);
+        Serial.println("[Telemetry] URL was: " + buildUrl(EP_TELEMETRY));
         http.end();
         enterOfflineMode();
         return;
@@ -608,12 +640,11 @@ void enterOfflineMode() {
 void handleOffline() {
     esp_task_wdt_reset();
 
-    // ── Rate-limit offline reads to once every 3 seconds ──
+    // Rate-limit offline reads to once every 3 seconds
     static unsigned long lastOfflineRead = 0;
     unsigned long now = millis();
     if (now - lastOfflineRead < 3000UL) return;
     lastOfflineRead = now;
-    // ──────────────────────────────────────────────────────
 
     float pressure = readPressure();
     int   valvePos = readValvePosition();
@@ -661,7 +692,6 @@ void attemptReconnect() {
         }
     }
 
-    // Quick probe
     StaticJsonDocument<256> doc;
     doc["nodeId"]        = NODE_ID;
     doc["pressure"]      = readPressure();

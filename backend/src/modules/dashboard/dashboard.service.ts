@@ -223,11 +223,8 @@ export class DashboardService {
   }
 
   getAlerts(): AlertData[] {
-    console.log('[Dashboard] getAlerts() called - fetching unacknowledged alerts');
-    const alerts = alertRepository.findAll(10, 0)
+    const alerts = alertRepository.findAll(100, 0)
       .filter(a => !a.acknowledged);
-    
-    console.log(`[Dashboard] Found ${alerts.length} unacknowledged alerts`);
 
     return alerts.map(alert => {
       const node = nodeRepository.findByNodeId(alert.nodeId);
@@ -388,7 +385,14 @@ export class DashboardService {
     const node = nodeRepository.findByNodeId(nodeId);
     if (!node) throw new Error('Zone not found');
 
-    const command = commandService.setManualOverride(nodeId, position, 'alerts-ui');
+    // Use commandService.setManualOverride() which properly:
+    // 1. Cancels existing pending commands
+    // 2. Sets valve mode to 'override'
+    // 3. Creates command with correct targetPosition and priority
+    // 4. Updates node state
+    // 5. Sends Telegram notification
+    // 6. Emits valve mode changed event
+    const command = commandService.setManualOverride(nodeId, position);
 
     return {
       success: true,
