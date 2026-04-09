@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { dashboardService } from './dashboard.service.js';
+import { ML_SIMULATION_SCENARIOS, MlSimulationScenario, mlRuntimeService } from './ml-runtime.service.js';
 
 const router = Router();
 
@@ -26,13 +27,90 @@ router.get('/kpi', (_req: Request, res: Response) => {
 });
 
 // GET /api/v1/dashboard/alerts
-router.get('/alerts', (_req: Request, res: Response) => {
+router.get('/alerts', (req: Request, res: Response) => {
+  console.log(`[Dashboard] 🔔 Incoming alerts request from ${req.ip || req.socket.remoteAddress || 'unknown'}`);
+  const startTime = Date.now();
+  
   try {
     const alerts = dashboardService.getAlerts();
+    const duration = Date.now() - startTime;
+    
+    console.log(`[Dashboard] ✅ Alerts response ready: ${alerts.length} items | Duration: ${duration}ms`);
+    console.log(`[Dashboard] 📨 Sending response with payload size: ${JSON.stringify(alerts).length} bytes`);
+    
     res.json(alerts);
   } catch (err) {
-    console.error('[Dashboard] Error getting alerts:', err);
+    const duration = Date.now() - startTime;
+    console.error(`[Dashboard] ❌ Error getting alerts after ${duration}ms:`, err instanceof Error ? err.message : String(err));
     res.status(500).json({ error: 'Failed to get alerts' });
+  }
+});
+
+// GET /api/v1/dashboard/ml/status
+router.get('/ml/status', (_req: Request, res: Response) => {
+  try {
+    res.json(mlRuntimeService.getStatus());
+  } catch (err) {
+    console.error('[Dashboard] Error getting ML status:', err);
+    res.status(500).json({ error: 'Failed to get ML status' });
+  }
+});
+
+// POST /api/v1/dashboard/ml/run
+router.post('/ml/run', async (_req: Request, res: Response) => {
+  try {
+    const status = await mlRuntimeService.runPredictionNow('api');
+    res.json(status);
+  } catch (err) {
+    console.error('[Dashboard] Error running ML prediction:', err);
+    res.status(500).json({ error: 'Failed to run ML prediction' });
+  }
+});
+
+// POST /api/v1/dashboard/ml/refresh
+router.post('/ml/refresh', async (_req: Request, res: Response) => {
+  try {
+    const status = await mlRuntimeService.runPredictionNow('api');
+    res.json({ success: true, status });
+  } catch (err) {
+    console.error('[Dashboard] Error refreshing ML prediction:', err);
+    res.status(500).json({ error: 'Failed to refresh ML prediction' });
+  }
+});
+
+// GET /api/v1/dashboard/ml/simulate/scenarios
+router.get('/ml/simulate/scenarios', (_req: Request, res: Response) => {
+  try {
+    res.json({ scenarios: mlRuntimeService.getSimulationScenarios() });
+  } catch (err) {
+    console.error('[Dashboard] Error getting ML simulation scenarios:', err);
+    res.status(500).json({ error: 'Failed to get ML simulation scenarios' });
+  }
+});
+
+// POST /api/v1/dashboard/ml/simulate
+router.post('/ml/simulate', async (req: Request, res: Response) => {
+  try {
+    const requested = req.body?.scenario;
+    const scenario = (typeof requested === 'string' && requested.length > 0 ? requested : 'all') as MlSimulationScenario;
+
+    if (scenario !== 'all' && !ML_SIMULATION_SCENARIOS.includes(scenario)) {
+      res.status(400).json({
+        error: 'Invalid scenario',
+        allowed: ['all', ...ML_SIMULATION_SCENARIOS],
+      });
+      return;
+    }
+
+    const results = await mlRuntimeService.simulateCondition(scenario);
+    res.json({
+      scenario,
+      count: results.length,
+      results,
+    });
+  } catch (err) {
+    console.error('[Dashboard] Error running ML simulation:', err);
+    res.status(500).json({ error: 'Failed to run ML simulation' });
   }
 });
 

@@ -3,7 +3,9 @@ import { telemetryRepository } from '../../repositories/telemetry.repository.js'
 import { alertRepository } from '../../repositories/alert.repository.js';
 import { decisionRepository } from '../../repositories/decision.repository.js';
 import { commandRepository } from '../../repositories/command.repository.js';
-import { eventBus } from '../../core/event-bus.js';
+import { commandService } from '../command/command.service.js';
+import { config } from '../../core/config.js';
+import { existsSync, readFileSync } from 'fs';
 import { ZoneSummary, KpiData, AlertData, PressureHistory, PressureReading, ZoneDetail, AnomalyData } from './types.js';
 
 function toZoneId(nodeId: string): string {
@@ -30,6 +32,113 @@ function formatTime(iso: string): string {
 function formatTimeWithSeconds(iso: string): string {
   const d = new Date(iso);
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+}
+
+function mapSeverity(riskLevel: string): 'crit' | 'warn' | 'low' {
+  const upper = riskLevel.toUpperCase();
+  if (upper === 'CRITICAL' || upper === 'HIGH') return 'crit';
+  if (upper === 'WARNING' || upper === 'MEDIUM') return 'warn';
+  return 'low';
+}
+
+type MlPredictionRecord = {
+  timestamp: string;
+  node_id: string;
+  anomaly_flag: number;
+  anomaly_score: number;
+  predicted_event: string;
+  event_explanation: string;
+  unexplained_pressure_drop: number;
+};
+
+function parseCsvLine(line: string): string[] {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+
+    if (c === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (c === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+      continue;
+    }
+
+    current += c;
+  }
+
+  values.push(current);
+  return values;
+}
+
+function normalizeNodeId(nodeId: string): string {
+  return nodeId.replace(/_/g, '-').toUpperCase();
+}
+
+function toMlConfidence(score: number, unexplainedDrop: number): number {
+  const bounded = Math.max(0, Math.min(1, score));
+  const base = Math.round(bounded * 100);
+  if (unexplainedDrop === 1) return Math.min(99, Math.max(base, 85));
+  return Math.max(30, base);
+}
+
+function readMlPredictionsForNode(nodeId: string): MlPredictionRecord[] {
+  const csvPath = config.mlPredictionsCsvPath;
+  if (!existsSync(csvPath)) return [];
+
+  const content = readFileSync(csvPath, 'utf-8').trim();
+  if (!content) return [];
+
+  const lines = content.split(/\r?\n/);
+  if (lines.length <= 1) return [];
+
+  const headers = parseCsvLine(lines[0]);
+  const headerIndex = new Map<string, number>();
+  headers.forEach((h, idx) => headerIndex.set(h, idx));
+
+  const get = (row: string[], key: string): string => {
+    const idx = headerIndex.get(key);
+    if (idx === undefined || idx >= row.length) return '';
+    return row[idx];
+  };
+
+  const normalizedTarget = normalizeNodeId(nodeId);
+  const records: MlPredictionRecord[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const row = parseCsvLine(line);
+    const rowNode = normalizeNodeId(get(row, 'node_id'));
+    if (rowNode !== normalizedTarget) continue;
+
+    records.push({
+      timestamp: get(row, 'timestamp'),
+      node_id: get(row, 'node_id'),
+      anomaly_flag: parseInt(get(row, 'anomaly_flag') || '0', 10),
+      anomaly_score: parseFloat(get(row, 'anomaly_score') || '0'),
+      predicted_event: get(row, 'predicted_event') || 'normal',
+      event_explanation: get(row, 'event_explanation') || 'No explanation available',
+      unexplained_pressure_drop: parseInt(get(row, 'unexplained_pressure_drop') || '0', 10),
+    });
+  }
+
+  return records
+    .filter(r => r.anomaly_flag === 1)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 10);
 }
 
 export class DashboardService {
@@ -114,19 +223,24 @@ export class DashboardService {
   }
 
   getAlerts(): AlertData[] {
+    console.log('[Dashboard] getAlerts() called - fetching unacknowledged alerts');
     const alerts = alertRepository.findAll(10, 0)
-      .filter(a => !a.sent);
+      .filter(a => !a.acknowledged);
+    
+    console.log(`[Dashboard] Found ${alerts.length} unacknowledged alerts`);
 
     return alerts.map(alert => {
       const node = nodeRepository.findByNodeId(alert.nodeId);
-      return {
+      const alertData = {
         id: alert.id,
         zone_id: toZoneId(alert.nodeId),
         zone_name: node?.name ?? alert.nodeId,
-        severity: alert.riskLevel.toLowerCase() as 'crit' | 'warn' | 'low',
+        severity: mapSeverity(alert.riskLevel),
         message: alert.message,
         time: formatTime(alert.createdAt),
       };
+      console.log(`[Dashboard] Alert: ${alert.id} | Severity: ${alertData.severity} (from ${alert.riskLevel}) | Zone: ${alertData.zone_id}`);
+      return alertData;
     });
   }
 
@@ -232,6 +346,25 @@ export class DashboardService {
 
   getAnomalies(zoneId: string): AnomalyData[] {
     const nodeId = fromZoneId(zoneId);
+
+    const mlRows = readMlPredictionsForNode(nodeId);
+    if (mlRows.length > 0) {
+      return mlRows.map((row) => {
+        const confidence = toMlConfidence(row.anomaly_score, row.unexplained_pressure_drop);
+        const severity: 'crit' | 'warn' = confidence >= 80 ? 'crit' : 'warn';
+        const eventName = row.predicted_event.replace(/_/g, ' ').toUpperCase();
+        const message = `${eventName}: ${row.event_explanation}`;
+
+        return {
+          confidence,
+          severity,
+          message,
+          model: 'Leakage ML v1',
+          time: formatTime(row.timestamp),
+        };
+      });
+    }
+
     const decisions = decisionRepository.findByNodeId(nodeId, 100);
 
     return decisions
@@ -255,19 +388,7 @@ export class DashboardService {
     const node = nodeRepository.findByNodeId(nodeId);
     if (!node) throw new Error('Zone not found');
 
-    nodeRepository.update(node.id, { valvePosition: position, valveMode: 'override' });
-
-    const command = commandRepository.create({
-      nodeId,
-      command: `SET_VALVE:${position}`,
-    });
-
-    eventBus.emitActionDispatched({
-      nodeId,
-      command: `SET_VALVE:${position}`,
-      commandId: command.id,
-      source: 'operator',
-    });
+    const command = commandService.setManualOverride(nodeId, position, 'alerts-ui');
 
     return {
       success: true,
@@ -283,7 +404,7 @@ export class DashboardService {
     const node = nodeRepository.findByNodeId(nodeId);
     if (!node) throw new Error('Zone not found');
 
-    nodeRepository.update(node.id, { valveMode: 'auto' });
+    commandService.revertToAuto(nodeId);
 
     return {
       success: true,

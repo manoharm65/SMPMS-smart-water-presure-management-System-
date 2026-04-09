@@ -5,11 +5,13 @@ import {
   getZoneDetail,
   getZoneAnomalies,
   getPressureHistory,
+  getMlStatus,
+  runMlNow,
   setValvePosition,
   revertValveToAuto,
   usePolling,
 } from '../services/api'
-import type { ZoneDetail, Anomaly, PressureHistory } from '../services/api'
+import type { ZoneDetail, Anomaly, PressureHistory, MlRuntimeStatus } from '../services/api'
 
 Chart.register(...registerables)
 
@@ -28,6 +30,7 @@ export default function ZoneDetail() {
   const [zoneData, setZoneData] = useState<ZoneDetail | null>(null)
   const [anomalies, setAnomalies] = useState<Anomaly[]>([])
   const [pressureHistory, setPressureHistory] = useState<PressureHistory | null>(null)
+  const [mlStatus, setMlStatus] = useState<MlRuntimeStatus | null>(null)
 
   // Loading states
   const [loading, setLoading] = useState(true)
@@ -37,6 +40,7 @@ export default function ZoneDetail() {
   // Valve control state
   const [valvePosition, setValvePositionState] = useState(0)
   const [valveOperating, setValveOperating] = useState(false)
+  const [mlRunning, setMlRunning] = useState(false)
   const [valveMessage, setValveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Error state
@@ -83,6 +87,16 @@ export default function ZoneDetail() {
     }
   }
 
+  // Fetch ML runtime status
+  const fetchMlStatus = async () => {
+    try {
+      const data = await getMlStatus()
+      setMlStatus(data)
+    } catch (err) {
+      console.error('Failed to load ML status:', err)
+    }
+  }
+
   // Initial data fetch
   useEffect(() => {
     if (!zoneId) return
@@ -92,10 +106,26 @@ export default function ZoneDetail() {
     fetchZoneDetail()
     fetchAnomalies()
     fetchPressureHistory()
+    fetchMlStatus()
   }, [zoneId])
 
   // Polling for zone detail (30s interval)
   usePolling(fetchZoneDetail, 30000, true)
+  usePolling(fetchAnomalies, 30000, true)
+  usePolling(fetchMlStatus, 30000, true)
+
+  const handleRunMlNow = async () => {
+    setMlRunning(true)
+    try {
+      const status = await runMlNow()
+      setMlStatus(status)
+      await fetchAnomalies()
+    } catch (err) {
+      console.error('Failed to run ML now:', err)
+    } finally {
+      setMlRunning(false)
+    }
+  }
 
   // Handle Apply Override
   const handleApplyOverride = async () => {
@@ -259,6 +289,10 @@ export default function ZoneDetail() {
   }
 
   const pressureStatus = getPressureStatus()
+  const criticalAnomalies = anomalies.filter(a => a.severity === 'crit').length
+  const topAnomaly = anomalies.length > 0
+    ? anomalies.reduce((best, current) => (current.confidence > best.confidence ? current : best), anomalies[0])
+    : null
 
   if (loading && !zoneData) {
     return (
@@ -454,9 +488,40 @@ export default function ZoneDetail() {
 
         {/* Right - AI Anomaly Log (60%) */}
         <div className="lg:col-span-3 p-5">
-          <h2 className="font-syne font-bold text-[18px] text-ink mb-4">
-            AI ANOMALY LOG — ISOLATION FOREST + LSTM
-          </h2>
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <h2 className="font-syne font-bold text-[18px] text-ink">
+              AI ANOMALY LOG — LEAKAGE ML
+            </h2>
+            <button
+              onClick={handleRunMlNow}
+              disabled={mlRunning || mlStatus?.isRunning}
+              className="px-3 py-2 bg-ink text-paper font-condensed text-[11px] uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {mlRunning || mlStatus?.isRunning ? 'Running ML...' : 'Run AI Now'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
+            <div className="p-2 border border-rule bg-paper">
+              <div className="font-condensed text-[9px] uppercase tracking-wider text-dim">Critical Events</div>
+              <div className="font-mono text-[22px] text-signal">{criticalAnomalies}</div>
+            </div>
+            <div className="p-2 border border-rule bg-paper">
+              <div className="font-condensed text-[9px] uppercase tracking-wider text-dim">Top Confidence</div>
+              <div className="font-mono text-[22px] text-pass">{topAnomaly ? `${topAnomaly.confidence}%` : '--'}</div>
+            </div>
+            <div className="p-2 border border-rule bg-paper">
+              <div className="font-condensed text-[9px] uppercase tracking-wider text-dim">Model Status</div>
+              <div className="font-mono text-[14px] text-ink uppercase">{mlStatus?.status ?? 'unknown'}</div>
+              <div className="font-mono text-[10px] text-dim mt-1">Rows: {mlStatus?.outputRows ?? 0}</div>
+            </div>
+          </div>
+
+          {mlStatus?.lastError && (
+            <div className="mb-4 p-2 bg-signal/20 text-signal font-condensed text-[11px]">
+              ML error: {mlStatus.lastError}
+            </div>
+          )}
 
           {loadingAnomalies ? (
             <div className="flex items-center justify-center h-32">

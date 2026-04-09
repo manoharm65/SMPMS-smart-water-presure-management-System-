@@ -83,6 +83,53 @@ export interface ValveCommandResponse {
   mode?: 'auto'
 }
 
+export interface MlRuntimeStatus {
+  schedulerEnabled: boolean
+  schedulerIntervalMs: number
+  status: 'idle' | 'running' | 'ok' | 'error'
+  isRunning: boolean
+  lastRunAt?: string
+  lastSuccessAt?: string
+  lastDurationMs?: number
+  lastError?: string
+  inputRows?: number
+  outputRows?: number
+  predictionsCsvPath: string
+  modelPath: string
+}
+
+export type MlSimulationScenario =
+  | 'normal'
+  | 'sudden_drop_no_action_supply_off'
+  | 'high_flow_low_pressure'
+  | 'erratic_pressure_sensor_issue'
+  | 'valve_fault_signature'
+  | 'construction_damage_signature'
+  | 'old_pipe_degradation_signature'
+  | 'all'
+
+export interface MlSimulationResult {
+  scenario: string
+  pressure: number
+  flow_rate: number
+  supply_on: number
+  control_action: number
+  unexplained_pressure_drop: number
+  anomaly_flag: number
+  anomaly_score: number
+  anomaly_threshold: number
+  predicted_possible_problem: string
+  possible_problem_if_condition_persists: string
+  ml_model_message: string
+  top3_probable_problems: string
+}
+
+export interface MlSimulationResponse {
+  scenario: MlSimulationScenario
+  count: number
+  results: MlSimulationResult[]
+}
+
 const defaultBaseUrl = (import.meta as any).env?.VITE_API_BASE_URL as
   | string
   | undefined
@@ -177,6 +224,31 @@ export async function getPressureHistory(
 
 export async function getZoneAnomalies(zoneId: string, cfg?: ApiConfig): Promise<Anomaly[]> {
   return apiGet<Anomaly[]>(`${BASE_URL}/zones/${zoneId}/anomalies`, cfg)
+}
+
+export async function getMlStatus(cfg?: ApiConfig): Promise<MlRuntimeStatus> {
+  return apiGet<MlRuntimeStatus>(`${BASE_URL}/ml/status`, cfg)
+}
+
+export async function runMlNow(cfg?: ApiConfig): Promise<MlRuntimeStatus> {
+  return apiPost<MlRuntimeStatus>(`${BASE_URL}/ml/run`, {}, cfg)
+}
+
+export async function getMlSimulationScenarios(
+  cfg?: ApiConfig
+): Promise<MlSimulationScenario[]> {
+  const res = await apiGet<{ scenarios: MlSimulationScenario[] }>(
+    `${BASE_URL}/ml/simulate/scenarios`,
+    cfg
+  )
+  return res.scenarios
+}
+
+export async function simulateMlCondition(
+  scenario: MlSimulationScenario,
+  cfg?: ApiConfig
+): Promise<MlSimulationResponse> {
+  return apiPost<MlSimulationResponse>(`${BASE_URL}/ml/simulate`, { scenario }, cfg)
 }
 
 export async function setValvePosition(

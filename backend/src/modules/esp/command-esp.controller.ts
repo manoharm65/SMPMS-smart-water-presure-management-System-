@@ -20,10 +20,18 @@ class AckCommandDto {
 
 const router = Router();
 
+function normalizeAckBody(body: any): any {
+  return {
+    ...body,
+    nodeId: body?.nodeId ?? body?.node_id,
+    actualPosition: body?.actualPosition ?? body?.actual_position,
+  };
+}
+
 // POST /api/v1/esp/commands/:commandId/ack
 router.post('/:commandId/ack', async (req: EspAuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const dto = await validateDto(AckCommandDto, req.body);
+    const dto = await validateDto(AckCommandDto, normalizeAckBody(req.body));
     commandService.acknowledge(req.params.commandId, dto.nodeId, dto.executed, dto.actualPosition, dto.timestamp);
     res.json({ acknowledged: true });
   } catch (err: any) {

@@ -24,6 +24,7 @@ export interface AppConfig {
   pressureCriticalLow: number;
   commandTimeoutCycles: number;
   commandTimeoutCheckMs: number;
+  mlPredictionsCsvPath: string;
 }
 
 export function getConfig(): AppConfig {
@@ -45,6 +46,7 @@ export function getConfig(): AppConfig {
   const pressureCriticalLow = parseFloat(process.env.PRESSURE_CRITICAL_LOW || '1.5');
   const commandTimeoutCycles = parseInt(process.env.COMMAND_TIMEOUT_CYCLES || '3', 10);
   const commandTimeoutCheckMs = parseInt(process.env.COMMAND_TIMEOUT_CHECK_MS || '30000', 10);
+  const mlPredictionsCsvPath = process.env.ML_PREDICTIONS_CSV || './ml/artifacts/predictions.csv';
 
   return {
     port,
@@ -62,6 +64,7 @@ export function getConfig(): AppConfig {
     pressureCriticalLow,
     commandTimeoutCycles,
     commandTimeoutCheckMs,
+    mlPredictionsCsvPath,
   };
 }
 

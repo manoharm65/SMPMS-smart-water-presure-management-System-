@@ -10,12 +10,12 @@
 // ============================================================================
 // USER CONFIGURATION
 // ============================================================================
-#define NODE_ID          "DMA_01"
+#define NODE_ID          "DMA_30"
 #define FIRMWARE_VERSION "1.0.0"
 
-const char* WIFI_SSID     = "Hi";
-const char* WIFI_PASSWORD = "baka_yaaro";
-const char* BACKEND_HOST  = "10.132.54.165";
+const char* WIFI_SSID     = "Datta";
+const char* WIFI_PASSWORD = "Manikya@107";
+const char* BACKEND_HOST  = "10.24.24.40";
 const int   BACKEND_PORT  = 3000;
 
 // ============================================================================

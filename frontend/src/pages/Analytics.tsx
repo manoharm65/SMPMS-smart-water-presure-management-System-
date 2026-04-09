@@ -12,7 +12,15 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js'
-import { getZones, getKPI, usePolling, type Zone, type KPI } from '../services/api'
+import {
+  getZones,
+  getKPI,
+  getZoneAnomalies,
+  usePolling,
+  type Zone,
+  type KPI,
+  type Anomaly,
+} from '../services/api'
 
 Chart.register(
   BarController,
@@ -69,6 +77,7 @@ export default function Analytics() {
   const [kpi, setKpi] = useState<KPI | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [aiEvents, setAiEvents] = useState<Array<Anomaly & { zoneId: string; zoneName: string }>>([])
 
   // Derive zone names from live data
   const zoneNames = zones.map(z => z.name)
@@ -92,8 +101,26 @@ export default function Analytics() {
         getZones(),
         getKPI(),
       ])
+
+      const anomalyByZone = await Promise.all(
+        zonesData.map(async (zone) => {
+          try {
+            const anomalies = await getZoneAnomalies(zone.id)
+            return anomalies.map((a) => ({ ...a, zoneId: zone.id, zoneName: zone.name }))
+          } catch {
+            return [] as Array<Anomaly & { zoneId: string; zoneName: string }>
+          }
+        })
+      )
+
+      const mergedEvents = anomalyByZone
+        .flat()
+        .sort((a, b) => b.confidence - a.confidence)
+        .slice(0, 8)
+
       setZones(zonesData)
       setKpi(kpiData)
+      setAiEvents(mergedEvents)
       setLoading(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data')
@@ -335,6 +362,47 @@ export default function Analytics() {
             <span className="font-mono text-xs text-dim">Critical (&gt;4.5)</span>
           </div>
         </div>
+      </div>
+
+      {/* Pattern Analysis */}
+      <div className="p-6 border-b-2 border-rule">
+        <h2 className="font-syne font-bold text-lg text-ink mb-4">AI DETECTED ANOMALIES</h2>
+        {loading ? (
+          <div className="font-mono text-sm text-dim">Loading AI anomaly stream...</div>
+        ) : error ? (
+          <div className="font-mono text-sm text-signal">Unable to load anomaly stream: {error}</div>
+        ) : aiEvents.length === 0 ? (
+          <div className="font-mono text-sm text-dim">No active AI anomalies detected.</div>
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="border-b-2 border-rule">
+                <th className="text-left py-3 px-4 font-condensed text-sm font-semibold text-dim uppercase tracking-wider">Zone</th>
+                <th className="text-left py-3 px-4 font-condensed text-sm font-semibold text-dim uppercase tracking-wider">Model</th>
+                <th className="text-left py-3 px-4 font-condensed text-sm font-semibold text-dim uppercase tracking-wider">Message</th>
+                <th className="text-left py-3 px-4 font-condensed text-sm font-semibold text-dim uppercase tracking-wider">Confidence</th>
+                <th className="text-left py-3 px-4 font-condensed text-sm font-semibold text-dim uppercase tracking-wider">Severity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {aiEvents.map((event, idx) => (
+                <tr key={`${event.zoneId}-${event.time}-${idx}`} className="border-b border-rule">
+                  <td className="py-3 px-4 font-condensed text-sm text-ink">{event.zoneName}</td>
+                  <td className="py-3 px-4 font-mono text-xs text-dim">{event.model}</td>
+                  <td className="py-3 px-4 font-condensed text-sm text-ink">{event.message}</td>
+                  <td className="py-3 px-4 font-mono text-xs text-dim">{event.confidence}%</td>
+                  <td className="py-3 px-4">
+                    <span className={`font-condensed text-xs font-semibold px-2 py-1 ${
+                      event.severity === 'crit' ? 'bg-signal text-paper' : 'bg-warn text-paper'
+                    }`}>
+                      {event.severity === 'crit' ? 'Critical' : 'Warning'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Pattern Analysis */}

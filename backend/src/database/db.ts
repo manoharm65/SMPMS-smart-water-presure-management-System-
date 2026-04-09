@@ -39,11 +39,18 @@ export async function initDatabase(): Promise<SqlJsDatabase> {
   if (existsSync(schemaPath)) {
     const schema = readFileSync(schemaPath, 'utf-8');
 
+    // Strip SQL single-line comments before splitting so statements are not
+    // accidentally skipped when a comment appears immediately above them.
+    const schemaWithoutComments = schema
+      .split(/\r?\n/)
+      .filter(line => !line.trim().startsWith('--'))
+      .join('\n');
+
     // Split schema into individual statements and run them one by one
-    const statements = schema
+    const statements = schemaWithoutComments
       .split(/;[\r\n]*/)
       .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
+      .filter(s => s.length > 0);
 
     for (const stmt of statements) {
       if (!stmt) continue;

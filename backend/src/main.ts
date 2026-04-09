@@ -15,11 +15,13 @@ import { globalErrorHandler, notFoundHandler } from './middleware/error-handler.
 import authRouter from './modules/auth/auth.controller.js';
 import nodeRouter from './modules/node/node.controller.js';
 import telemetryRouter from './modules/telemetry/telemetry.controller.js';
+import { telemetryService } from './modules/telemetry/telemetry.service.js';
 import alertRouter from './modules/alert/alert.controller.js';
 import commandRouter from './modules/command/command.controller.js';
 import healthRouter from './modules/health/health.controller.js';
 import dashboardRouter from './modules/dashboard/dashboard.controller.js';
 import espRouter from './modules/esp/esp.controller.js';
+import { mlRuntimeService } from './modules/dashboard/ml-runtime.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -35,8 +37,10 @@ async function bootstrap() {
   // Initialize services (which sets up event listeners)
   console.log('🚀 Initializing services...');
   decisionService; // Initialize decision service
+  telemetryService; // Initialize telemetry service
   alertService;    // Initialize alert service
   commandService;  // Initialize command service
+  mlRuntimeService.startScheduler();
   console.log('✅ Services initialized\n');
 
   // Create Express app
@@ -99,6 +103,9 @@ async function bootstrap() {
    GET  /api/v1/dashboard/pressure-history/:zoneId - Pressure history
    GET  /api/v1/dashboard/zones/:zoneId - Zone detail
    GET  /api/v1/dashboard/zones/:zoneId/anomalies - AI anomalies
+  GET  /api/v1/dashboard/ml/status - ML runtime status
+  POST /api/v1/dashboard/ml/run - Trigger ML scoring now
+  POST /api/v1/dashboard/ml/simulate - Condition simulation and possible problem prediction
    POST /api/v1/dashboard/zones/:zoneId/valve - Valve override
    POST /api/v1/dashboard/zones/:zoneId/valve/revert - Revert to auto
 `);
@@ -107,6 +114,8 @@ async function bootstrap() {
   // Graceful shutdown
   process.on('SIGINT', () => {
     console.log('\n🛑 Shutting down...');
+    telemetryService.shutdown();
+    mlRuntimeService.shutdown();
     commandService.shutdown();
     closeDatabase();
     process.exit(0);
@@ -114,6 +123,8 @@ async function bootstrap() {
 
   process.on('SIGTERM', () => {
     console.log('\n🛑 Shutting down...');
+    telemetryService.shutdown();
+    mlRuntimeService.shutdown();
     commandService.shutdown();
     closeDatabase();
     process.exit(0);
