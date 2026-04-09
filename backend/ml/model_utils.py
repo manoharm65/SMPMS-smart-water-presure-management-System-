@@ -59,6 +59,20 @@ def build_features(df: pd.DataFrame) -> FeatureBuildResult:
         data["construction_flag"] = 0
     if "pipe_age_years" not in data.columns:
         data["pipe_age_years"] = 10
+    if "ambient_temp_c" not in data.columns:
+        data["ambient_temp_c"] = 27.0
+    if "water_temp_c" not in data.columns:
+        data["water_temp_c"] = 24.0
+    if "vibration_amp" not in data.columns:
+        data["vibration_amp"] = 0.0
+    if "acoustic_db" not in data.columns:
+        data["acoustic_db"] = 0.0
+    if "material_risk_score" not in data.columns:
+        data["material_risk_score"] = 0.35
+    if "traffic_load_index" not in data.columns:
+        data["traffic_load_index"] = 0.2
+    if "soil_movement_index" not in data.columns:
+        data["soil_movement_index"] = 0.15
 
     by_node = data.groupby("node_id", group_keys=False)
 
@@ -78,6 +92,17 @@ def build_features(df: pd.DataFrame) -> FeatureBuildResult:
     )
 
     data["flow_pressure_ratio"] = data["flow_rate"] / (data["pressure"] + 0.1)
+    data["temp_delta_c"] = data["ambient_temp_c"] - data["water_temp_c"]
+    data["vibration_acoustic_index"] = data["vibration_amp"] * (data["acoustic_db"] / 100.0)
+    data["burst_stress_index"] = (
+        data["pressure_gradient_abs"] * 0.35
+        + data["vibration_amp"] * 0.25
+        + data["acoustic_db"] * 0.015
+        + data["temp_delta_c"].abs() * 0.10
+        + data["traffic_load_index"] * 1.8
+        + data["soil_movement_index"] * 1.9
+        + data["material_risk_score"] * 2.2
+    )
     data["is_night"] = data["timestamp"].dt.hour.between(0, 4).astype(int)
     data["unexplained_pressure_drop"] = (
         (data["delta_pressure"] < -0.6)
@@ -94,6 +119,15 @@ def build_features(df: pd.DataFrame) -> FeatureBuildResult:
         "neighbor_pressure",
         "construction_flag",
         "pipe_age_years",
+        "ambient_temp_c",
+        "water_temp_c",
+        "temp_delta_c",
+        "vibration_amp",
+        "acoustic_db",
+        "vibration_acoustic_index",
+        "material_risk_score",
+        "traffic_load_index",
+        "soil_movement_index",
         "delta_pressure",
         "delta_flow",
         "pressure_gradient",
@@ -102,6 +136,7 @@ def build_features(df: pd.DataFrame) -> FeatureBuildResult:
         "pressure_roll_std_5",
         "flow_roll_mean_5",
         "flow_pressure_ratio",
+        "burst_stress_index",
         "is_night",
         "unexplained_pressure_drop",
     ]

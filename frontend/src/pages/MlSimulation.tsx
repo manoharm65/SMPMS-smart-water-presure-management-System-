@@ -83,6 +83,13 @@ function inferScenarioFromControls(c: UiControls): Exclude<MlSimulationScenario,
   return 'normal'
 }
 
+type WorkingRule = {
+  id: string
+  condition: string
+  outcome: string
+  active: boolean
+}
+
 export default function MlSimulation() {
   const [controls, setControls] = useState<UiControls>(defaultControls)
   const [scenarioMode, setScenarioMode] = useState<'auto' | 'manual'>('auto')
@@ -97,6 +104,54 @@ export default function MlSimulation() {
 
   const inferredScenario = useMemo(() => inferScenarioFromControls(controls), [controls])
   const selectedScenario = scenarioMode === 'auto' ? inferredScenario : manualScenario
+  const workingRules = useMemo<WorkingRule[]>(() => {
+    const currentRisk = result ? toRiskLabel(result) : 'LOW'
+
+    return [
+      {
+        id: 'pressure-spike',
+        condition: 'IF pressure is high (> 5.5 bar) OR pressure changes suddenly',
+        outcome: 'THEN burst probability increases and model risk moves to MEDIUM/HIGH.',
+        active: controls.pressure > 5.5 || controls.unexplainedDrop >= 1.4,
+      },
+      {
+        id: 'high-flow-low-pressure',
+        condition: 'IF flow is high while pressure is low',
+        outcome: 'THEN hidden leak or active burst is likely.',
+        active: controls.flowRate >= 45 && controls.pressure <= 3.1,
+      },
+      {
+        id: 'supply-off-drop',
+        condition: 'IF supply is OFF and pressure still drops without control action',
+        outcome: 'THEN unexplained network loss is suspected.',
+        active: !controls.supplyOn && controls.unexplainedDrop >= 1.2,
+      },
+      {
+        id: 'construction-impact',
+        condition: 'IF construction activity is ON with noticeable pressure drop',
+        outcome: 'THEN construction damage signature is probable.',
+        active: controls.constructionActivity && controls.unexplainedDrop >= 0.8,
+      },
+      {
+        id: 'aging-pipe',
+        condition: 'IF pipe age is high (>= 20 years) with weak pressure trend',
+        outcome: 'THEN old pipe degradation risk rises.',
+        active: controls.pipeAgeYears >= 20 && controls.pressure <= 3.8,
+      },
+      {
+        id: 'sensor-noise',
+        condition: 'IF erratic sensor readings are present',
+        outcome: 'THEN sensor fault is more likely than physical leak.',
+        active: controls.erraticSensorReadings,
+      },
+      {
+        id: 'risk-summary',
+        condition: 'IF anomaly score crosses model threshold',
+        outcome: `THEN immediate investigation is recommended. Current model risk: ${currentRisk}.`,
+        active: Boolean(result && result.anomaly_flag === 1),
+      },
+    ]
+  }, [controls, result])
 
   useEffect(() => {
     void getMlSimulationScenarios()
@@ -417,6 +472,38 @@ export default function MlSimulation() {
               Returned rows: {lastResponse.count} | Scenario: {formatEventName(lastResponse.scenario)}
             </p>
           ) : null}
+        </div>
+      </section>
+
+      <section className="border-b-2 border-rule px-6 py-6 md:px-10">
+        <h2 className="font-syne text-2xl font-bold">Working Data (If This Happens, Then This Will Happen)</h2>
+        <p className="mt-2 max-w-4xl font-mono text-xs uppercase tracking-wide text-dim">
+          Live interpretation of your selected values using the model logic and burst-risk factors.
+        </p>
+
+        <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {workingRules.map((rule) => (
+            <div
+              key={rule.id}
+              className={`border-2 p-4 transition-colors ${
+                rule.active
+                  ? 'border-signal bg-signal/10 text-ink'
+                  : 'border-rule bg-paper text-dim'
+              }`}
+            >
+              <p className="font-condensed text-[11px] uppercase tracking-widest">{rule.condition}</p>
+              <p className="mt-2 font-mono text-xs uppercase leading-6">{rule.outcome}</p>
+              <p
+                className={`mt-3 inline-block border px-2 py-1 font-mono text-[10px] uppercase tracking-wider ${
+                  rule.active
+                    ? 'border-signal text-signal'
+                    : 'border-rule text-dim'
+                }`}
+              >
+                {rule.active ? 'Matching Current Inputs' : 'Not Triggered'}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
     </div>
