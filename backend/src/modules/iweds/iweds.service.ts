@@ -6,6 +6,7 @@ import {
   generateIwedsApiKey,
   HouseholdConnection,
 } from '../../repositories/iweds.repository.js';
+import { integrationOrchestrator } from '../integration/integration.orchestrator.js';
 
 const DISCHARGE_COEFFICIENT = 0.62;
 const WATER_DENSITY = 1000;
@@ -179,6 +180,16 @@ export class IwedsService {
           webhookFired: webhookResult.success,
           webhookAttempts: webhookResult.attempts,
           webhookStatus: webhookResult.status,
+        });
+
+        integrationOrchestrator.captureIwedsDetection({
+          dmaId: household.dmaId,
+          householdId: household.householdId,
+          detectionState: 'ILLEGAL',
+          severity: severity ?? 'LOW',
+          severityScore: toFixedNumber(severityScore, 4),
+          timestamp: onsetTime,
+          qExcessLps,
         });
 
         webhookFired = webhookResult.success;

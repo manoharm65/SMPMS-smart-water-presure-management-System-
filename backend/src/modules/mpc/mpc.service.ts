@@ -1,6 +1,7 @@
-﻿import { runMPCCycle, MPCNodeState, MPCOptimizationResult } from './mpc.controller.js';
+import { runMPCCycle, MPCNodeState, MPCOptimizationResult } from './mpc.controller.js';
 import { mpcConfigDefaults, MPCConfig } from './mpc.config.js';
 import { eventBus, ActionPayload } from '../../core/event-bus.js';
+import { integrationOrchestrator } from '../integration/integration.orchestrator.js';
 
 let config: MPCConfig = { ...mpcConfigDefaults };
 let timer: NodeJS.Timeout | null = null;
@@ -90,6 +91,17 @@ export async function runCycle() {
 
     const result = runMPCCycle({ nodes: activeNodes, config });
     const dispatched = await dispatchAll(result.commands);
+
+    integrationOrchestrator.captureMpcCycle({
+      timestamp: new Date().toISOString(),
+      commands: result.commands.map(cmd => ({
+        id: cmd.id,
+        reason: cmd.reason || 'optimization',
+        valve_target_pct: cmd.valve_target_pct,
+        estimated_pressure: cmd.estimated_pressure,
+      })),
+      riskHint: result.cost !== null && result.cost > 100 ? 'WARNING' : undefined,
+    });
 
     for (const cmd of result.commands) {
       const node = nodeRegistry.get(cmd.id);
