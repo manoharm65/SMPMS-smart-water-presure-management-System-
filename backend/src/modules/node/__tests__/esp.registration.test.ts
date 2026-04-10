@@ -4,8 +4,8 @@ import { NodeService } from '../node.service';
 import { NodeRepository } from '../../../repositories/node.repository';
 
 // Mock dependencies
-jest.mock('../../../repositories/node.repository');
-jest.mock('../../../core/config', () => ({
+vi.mock('../../../repositories/node.repository');
+vi.mock('../../../core/config', () => ({
   config: {
     telemetryIntervalMs: 10000,
     pressureCriticalHigh: 5.5,
@@ -15,14 +15,14 @@ jest.mock('../../../core/config', () => ({
   },
 }));
 
-const MockedNodeRepository = NodeRepository as jest.MockedClass<typeof NodeRepository>;
+const MockedNodeRepository = NodeRepository as unknown as typeof NodeRepository;
 
 describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
   let app: Express;
   let nodeService: NodeService;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     nodeService = new NodeService();
 
     app = express();
@@ -30,7 +30,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
   });
 
   afterEach(() => {
-    jest.resetModules();
+    vi.resetModules();
   });
 
   describe('Input Validation', () => {
@@ -612,7 +612,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       MockedNodeRepository.prototype.findByNodeId.mockReturnValue(null);
       MockedNodeRepository.prototype.create.mockReturnValue({
         id: 'new-node-uuid',
-        nodeId: 'DMA_01-TEST',
+        nodeId: 'valve_101',
         isActive: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -635,13 +635,13 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       const response = await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA_01-TEST',
+          nodeId: 'valve_101',
           firmwareVersion: '1.0.0',
           ipAddress: '192.168.1.100',
         });
 
       expect(response.status).toBe(200);
-      expect(response.body.node_id).toBe('DMA_01-TEST');
+      expect(response.body.node_id).toBe('valve_101');
     });
   });
 });

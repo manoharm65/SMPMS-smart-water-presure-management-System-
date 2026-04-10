@@ -7,11 +7,13 @@ import {
   getPressureHistory,
   getMlStatus,
   runMlNow,
+  getMpcStatus,
+  runMpcNow,
   setValvePosition,
   revertValveToAuto,
   usePolling,
 } from '../services/api'
-import type { ZoneDetail, Anomaly, PressureHistory, MlRuntimeStatus } from '../services/api'
+import type { ZoneDetail, Anomaly, PressureHistory, MlRuntimeStatus, MpcStatus } from '../services/api'
 
 Chart.register(...registerables)
 
@@ -41,6 +43,8 @@ export default function ZoneDetail() {
   const [valvePosition, setValvePositionState] = useState(0)
   const [valveOperating, setValveOperating] = useState(false)
   const [mlRunning, setMlRunning] = useState(false)
+  const [mpcStatus, setMpcStatus] = useState<MpcStatus | null>(null)
+  const [mpcOptimizing, setMpcOptimizing] = useState(false)
   const [valveMessage, setValveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Error state
@@ -109,7 +113,7 @@ export default function ZoneDetail() {
     fetchMlStatus()
   }, [zoneId])
 
-  // Polling for zone detail (30s interval)
+// Polling for zone detail (30s interval)
   usePolling(fetchZoneDetail, 30000, true)
   usePolling(fetchAnomalies, 30000, true)
   usePolling(fetchMlStatus, 30000, true)
@@ -124,6 +128,27 @@ export default function ZoneDetail() {
       console.error('Failed to run ML now:', err)
     } finally {
       setMlRunning(false)
+    }
+  }
+
+  const handleRunMpcNow = async () => {
+    setMpcOptimizing(true)
+    try {
+      await runMpcNow()
+      await fetchMpcStatus()
+    } catch (err) {
+      console.error('Failed to run MPC now:', err)
+    } finally {
+      setMpcOptimizing(false)
+    }
+  }
+
+  const fetchMpcStatus = async () => {
+    try {
+      const status = await getMpcStatus()
+      setMpcStatus(status)
+    } catch (err) {
+      console.error('Failed to fetch MPC status:', err)
     }
   }
 
@@ -496,6 +521,13 @@ export default function ZoneDetail() {
               className="px-3 py-2 bg-ink text-paper font-condensed text-[11px] uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {mlRunning || mlStatus?.isRunning ? 'Running ML...' : 'Run AI Now'}
+            </button>
+            <button
+              onClick={handleRunMpcNow}
+              disabled={mpcOptimizing || mpcStatus?.isRunning}
+              className="ml-2 px-3 py-2 bg-pass text-paper font-condensed text-[11px] uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {mpcOptimizing || mpcStatus?.isRunning ? 'Optimizing...' : 'Optimize Now'}
             </button>
           </div>
 

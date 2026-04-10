@@ -1,98 +1,159 @@
-# SMPMS Development Runner
-# Opens frontend and backend in separate CMD windows with simultaneous kill option
+# SMPMS Development Runner (Ultimate Refactor)
+# -------------------------------------------
+# Features:
+# - Starts frontend & backend in separate CMD windows
+# - Clean shutdown (kills full process tree)
+# - Restart with R / r
+# - Ctrl+C exits everything cleanly
+# - Path validation + stability improvements
 
 $ErrorActionPreference = "Stop"
 
-$projectRoot = Split-Path -Parent $PSScriptRoot
+# ---------------------------------------
+# PATH SETUP
+# ---------------------------------------
+$projectRoot = $PSScriptRoot
 $frontendPath = Join-Path $projectRoot "frontend"
-$backendPath = Join-Path $projectRoot "backend"
+$backendPath  = Join-Path $projectRoot "backend"
 
-# Process handles for cleanup
-$frontendJob = $null
-$backendJob = $null
+# ---------------------------------------
+# GLOBAL PROCESS HANDLES
+# ---------------------------------------
+$global:frontendProcess = $null
+$global:backendProcess  = $null
 
-function Get-ScriptPath {
-    $scriptPath = $PSCommandPath
-    if (-not $scriptPath) {
-        $scriptPath = $MyInvocation.ScriptName
+# ---------------------------------------
+# VALIDATE PATHS
+# ---------------------------------------
+function Validate-Paths {
+    Write-Host "[CHECK] Validating project structure..." -ForegroundColor Cyan
+
+    if (!(Test-Path $frontendPath)) {
+        Write-Host "[ERROR] Frontend path not found: $frontendPath" -ForegroundColor Red
+        exit 1
     }
-    return $scriptPath
+
+    if (!(Test-Path $backendPath)) {
+        Write-Host "[ERROR] Backend path not found: $backendPath" -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "[OK] Paths validated." -ForegroundColor Green
 }
 
-function Start-Failed {
-    Write-Host "`n[ERROR] Failed to start processes. Killing any running instances..." -ForegroundColor Red
-    Stop-All
-    exit 1
+# ---------------------------------------
+# START SERVERS
+# ---------------------------------------
+function Start-Servers {
+    Write-Host "`n[START] Launching development servers..." -ForegroundColor Cyan
+
+    # Frontend
+    Write-Host "  -> Frontend: http://localhost:5173" -ForegroundColor Green
+    $global:frontendProcess = Start-Process "cmd.exe" `
+        -ArgumentList "/k cd /d `"$frontendPath`" && npm run dev" `
+        -PassThru
+
+    # Backend
+    Write-Host "  -> Backend : http://localhost:3000" -ForegroundColor Green
+    $global:backendProcess = Start-Process "cmd.exe" `
+        -ArgumentList "/k cd /d `"$backendPath`" && npm run dev" `
+        -PassThru
 }
 
-function Stop-All {
-    Write-Host "`n[STOP] Shutting down all processes..." -ForegroundColor Yellow
+# ---------------------------------------
+# STOP SERVERS (KILL FULL TREE)
+# ---------------------------------------
+function Stop-Servers {
+    Write-Host "`n[STOP] Shutting down servers..." -ForegroundColor Yellow
 
-    if ($frontendJob) {
-        Write-Host "  -> Stopping Frontend (Vite)..." -ForegroundColor Cyan
-        Stop-Job -Job $frontendJob -ErrorAction SilentlyContinue
-        Remove-Job -Job $frontendJob -Force -ErrorAction SilentlyContinue
+    if ($frontendProcess -and !$frontendProcess.HasExited) {
+        Write-Host "  -> Killing Frontend tree..." -ForegroundColor Cyan
+        cmd /c "taskkill /PID $($frontendProcess.Id) /T /F" | Out-Null
     }
 
-    if ($backendJob) {
-        Write-Host "  -> Stopping Backend (Node)..." -ForegroundColor Cyan
-        Stop-Job -Job $backendJob -ErrorAction SilentlyContinue
-        Remove-Job -Job $backendJob -Force -ErrorAction SilentlyContinue
+    if ($backendProcess -and !$backendProcess.HasExited) {
+        Write-Host "  -> Killing Backend tree..." -ForegroundColor Cyan
+        cmd /c "taskkill /PID $($backendProcess.Id) /T /F" | Out-Null
     }
 
-    # Kill any remaining node processes started by this script
-    $currentPid = $PID
-    Get-CimInstance Win32_Process | Where-Object {
-        $_.Name -eq "cmd.exe" -and $_.ProcessId -ne $currentPid
-    } | ForEach-Object {
-        try {
-            $parentProcess = Get-CimInstance Win32_Process -Filter "ProcessId = $($_.ParentProcessId)"
-            if ($parentProcess -and $parentProcess.ProcessId -eq $currentPid) {
-                Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
-            }
-        } catch {}
-    }
+    # Optional safety (uncomment if needed)
+    # Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
 
-    Write-Host "[DONE] All processes stopped." -ForegroundColor Green
+    $global:frontendProcess = $null
+    $global:backendProcess  = $null
+
+    Write-Host "[DONE] All servers stopped." -ForegroundColor Green
 }
 
-# Register cleanup on script exit
-trap { Stop-All }
+# ---------------------------------------
+# RESTART SERVERS
+# ---------------------------------------
+function Restart-Servers {
+    Write-Host "`n[RESTART] Restarting servers..." -ForegroundColor Magenta
 
-# Ctrl+C handler
-$scriptPath = Get-ScriptPath
-$null = [Console]::TreatControlCAsInput = $true
+    Stop-Servers
+
+    # Allow ports/process cleanup
+    Start-Sleep -Seconds 2
+
+    Start-Servers
+}
+
+# ---------------------------------------
+# CLEAN EXIT HANDLER
+# ---------------------------------------
+trap {
+    Stop-Servers
+    exit
+}
+
+# ---------------------------------------
+# UI HEADER
+# ---------------------------------------
+Clear-Host
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  SMPMS Development Environment" -ForegroundColor Cyan
-Write-Host "========================================`n" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
 
-Write-Host "[INFO] Starting Frontend on http://localhost:5173" -ForegroundColor Green
-Write-Host "[INFO] Starting Backend  on http://localhost:3000`n" -ForegroundColor Green
+# ---------------------------------------
+# RUN
+# ---------------------------------------
+Validate-Paths
+Start-Servers
 
-# Start Frontend in new CMD window
-Start-Process -FilePath "cmd.exe" -ArgumentList "/k cd /d `"$frontendPath`" && npm run dev" -WindowStyle Normal -PassThru | Out-Null
+Write-Host "`n----------------------------------------" -ForegroundColor DarkGray
+Write-Host " Controls:" -ForegroundColor White
+Write-Host "   Ctrl + C  -> Stop all servers" -ForegroundColor Yellow
+Write-Host "   R / r     -> Restart servers" -ForegroundColor Yellow
+Write-Host "----------------------------------------`n" -ForegroundColor DarkGray
 
-# Start Backend in new CMD window
-Start-Process -FilePath "cmd.exe" -ArgumentList "/k cd /d `"$backendPath`" && npm run dev" -WindowStyle Normal -PassThru | Out-Null
+# Enable key capture
+[Console]::TreatControlCAsInput = $true
 
-Write-Host "----------------------------------------" -ForegroundColor DarkGray
-Write-Host "  Both servers are starting..." -ForegroundColor White
-Write-Host "  Press Ctrl+C to stop both servers" -ForegroundColor Yellow
-Write-Host "----------------------------------------" -ForegroundColor DarkGray
-
-# Wait for Ctrl+C
+# ---------------------------------------
+# INPUT LOOP
+# ---------------------------------------
 try {
     while ($true) {
-        Start-Sleep -Seconds 1
+        Start-Sleep -Milliseconds 200
+
         if ([Console]::KeyAvailable) {
             $key = [Console]::ReadKey($true)
+
+            # Ctrl+C
             if ($key.Key -eq "C" -and $key.Modifiers -eq "Control") {
-                Write-Host "`n`n[INPUT] Ctrl+C detected!" -ForegroundColor Yellow
+                Write-Host "`n[INPUT] Ctrl+C detected!" -ForegroundColor Yellow
                 break
+            }
+
+            # Restart (R or r)
+            if ($key.Key -eq "R") {
+                Restart-Servers
             }
         }
     }
-} finally {
-    Stop-All
+}
+finally {
+    Stop-Servers
 }

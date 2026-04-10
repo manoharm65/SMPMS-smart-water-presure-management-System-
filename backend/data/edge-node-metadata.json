@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "description": "Centralized metadata for hardware edge nodes (not stored on edge devices)",
+  "nodes": [
+    {
+      "node_id": "VALVE_205",
+      "topology": {
+        "upstream_node_id": "NODE_204",
+        "downstream_node_id": "NODE_206",
+        "distance_to_upstream_m": 120.5,
+        "distance_to_downstream_m": 95.0,
+        "elevation_m": 45.2,
+        "dma_id": "DMA_NORTH_3"
+      }
+    },
+    {
+      "node_id": "VALVE_206",
+      "topology": {
+        "upstream_node_id": "NODE_205",
+        "downstream_node_id": "NODE_207",
+        "distance_to_upstream_m": 87.3,
+        "distance_to_downstream_m": 134.8,
+        "elevation_m": 41.7,
+        "dma_id": "DMA_NORTH_3"
+      }
+    }
+  ]
+}

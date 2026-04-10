@@ -124,6 +124,26 @@ export interface MlSimulationResult {
   top3_probable_problems: string
 }
 
+export interface MpcStatus {
+  lastRun: string | null;
+  isRunning: boolean;
+  status: string;
+  logs?: string[];
+  last_cycle?: any;
+}
+
+// =============================================================================
+// MPC Status & Actions
+// =============================================================================
+
+export async function getMpcStatus(cfg?: ApiConfig): Promise<MpcStatus> {
+  return apiGet<MpcStatus>('/api/v1/mpc/status', cfg)
+}
+
+export async function runMpcNow(cfg?: ApiConfig): Promise<any> {
+  return apiPost<any>('/api/v1/mpc/run', {}, cfg)
+}
+
 export interface MlSimulationResponse {
   scenario: MlSimulationScenario
   count: number

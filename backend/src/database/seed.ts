@@ -29,7 +29,7 @@ async function seed() {
 
   // Create default nodes
   const defaultNodes = [
-    { nodeId: 'DMA_999', name: 'District Meter Area 1', location: 'Zone A' },
+    { nodeId: 'valve_1', name: 'District Meter Area 1', location: 'Zone A' },
   ];
 
   for (const nodeData of defaultNodes) {

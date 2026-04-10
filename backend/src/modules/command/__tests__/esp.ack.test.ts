@@ -6,20 +6,20 @@ import { NodeRepository } from '../../../repositories/node.repository';
 import { eventBus } from '../../../core/event-bus';
 
 // Mock dependencies
-jest.mock('../../../repositories/command.repository');
-jest.mock('../../../repositories/node.repository');
-jest.mock('../../../core/event-bus');
-jest.mock('../../../integrations/telegram.service', () => ({
+vi.mock('../../../repositories/command.repository');
+vi.mock('../../../repositories/node.repository');
+vi.mock('../../../core/event-bus');
+vi.mock('../../../integrations/telegram.service', () => ({
   telegramService: {
-    sendTimeoutNotification: jest.fn().mockResolvedValue(undefined),
-    sendCriticalCommandNotification: jest.fn().mockResolvedValue(undefined),
-    sendManualOverrideNotification: jest.fn().mockResolvedValue(undefined),
-    sendOverrideAutoCancelledNotification: jest.fn().mockResolvedValue(undefined),
+    sendTimeoutNotification: vi.fn().mockResolvedValue(undefined),
+    sendCriticalCommandNotification: vi.fn().mockResolvedValue(undefined),
+    sendManualOverrideNotification: vi.fn().mockResolvedValue(undefined),
+    sendOverrideAutoCancelledNotification: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
-const MockedCommandRepository = CommandRepository as jest.MockedClass<typeof CommandRepository>;
-const MockedNodeRepository = NodeRepository as jest.MockedClass<typeof NodeRepository>;
+const MockedCommandRepository = CommandRepository as any;
+const MockedNodeRepository = NodeRepository as any;
 
 describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () => {
   let app: Express;
@@ -50,10 +50,10 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Reset the command service singleton for each test
-    jest.resetModules();
+    vi.resetModules();
 
     app = express();
     app.use(express.json());
@@ -78,7 +78,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
   });
 
   afterEach(() => {
-    jest.resetModules();
+    vi.resetModules();
   });
 
   describe('Authentication', () => {
@@ -530,7 +530,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
     it('should emit alert when command execution fails', async () => {
       MockedCommandRepository.prototype.findByIdAndNodeId.mockReturnValue(mockDispatchedCommand as any);
       MockedCommandRepository.prototype.updateStatus.mockReturnValue(undefined);
-      (eventBus.emitAlertTriggered as jest.Mock).mockReturnValue(undefined);
+      (eventBus.emitAlertTriggered as vi.Mock).mockReturnValue(undefined);
 
       const testApp = express();
       testApp.use(express.json());

@@ -21,6 +21,8 @@ import commandRouter from './modules/command/command.controller.js';
 import healthRouter from './modules/health/health.controller.js';
 import dashboardRouter from './modules/dashboard/dashboard.controller.js';
 import espRouter from './modules/esp/esp.controller.js';
+import mpcRouter from './modules/mpc/mpc.routes.js';
+import { mpcService } from './modules/mpc/mpc.service.js';
 import { mlRuntimeService } from './modules/dashboard/ml-runtime.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -41,6 +43,7 @@ async function bootstrap() {
   alertService;    // Initialize alert service
   commandService;  // Initialize command service
   mlRuntimeService.startScheduler();
+  mpcService.start();
   console.log('✅ Services initialized\n');
 
   // Create Express app
@@ -65,6 +68,7 @@ async function bootstrap() {
   app.use('/api/v1/commands', commandRouter);
   app.use('/api/v1/dashboard', dashboardRouter);
   app.use('/api/v1/esp', espRouter);
+  app.use('/api/v1/mpc', mpcRouter);
 
   // Legacy /telemetry route (for ESP32 compatibility)
   app.use('/telemetry', telemetryRouter);

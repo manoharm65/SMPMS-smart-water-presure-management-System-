@@ -141,7 +141,7 @@ async function seedDefaultData(database: SqlJsDatabase): Promise<void> {
 
   // Create default DMA nodes if not exist
   const defaultNodes = [
-    { nodeId: 'DMA_999', name: 'District Meter Area 1', location: 'Zone A' },
+    { nodeId: 'valve_1', name: 'District Meter Area 1', location: 'Zone A' },
   ];
 
   for (const node of defaultNodes) {

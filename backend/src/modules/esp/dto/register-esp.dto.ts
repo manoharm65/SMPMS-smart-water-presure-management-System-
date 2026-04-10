@@ -2,7 +2,7 @@ import { IsString, Matches } from 'class-validator';
 
 export class RegisterEspDto {
   @IsString()
-  @Matches(/^DMA_[A-Z0-9]{1,20}$/, { message: 'nodeId must match DMA_XXX format (e.g., DMA_01)' })
+  @Matches(/^valve_[0-9]{1,20}$/, { message: 'nodeId must match valve_X format (e.g., valve_1)' })
   nodeId!: string;
 
   @IsString()
