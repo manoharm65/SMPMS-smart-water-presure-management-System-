@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   getMlSimulationScenarios,
   simulateMlCondition,
+  type MlSimulationInput,
   type MlSimulationResponse,
   type MlSimulationResult,
   type MlSimulationScenario,
@@ -22,6 +23,9 @@ type UiControls = {
   flowRate: number
   supplyOn: boolean
   valvePosition: number
+  previousValvePosition: number
+  pressureLag2: number
+  hydraulicGradeAngleDeg: number
   unexplainedDrop: number
   pipeAgeYears: number
   constructionActivity: boolean
@@ -33,6 +37,9 @@ const defaultControls: UiControls = {
   flowRate: 30,
   supplyOn: true,
   valvePosition: 55,
+  previousValvePosition: 58,
+  pressureLag2: 3.9,
+  hydraulicGradeAngleDeg: 2.0,
   unexplainedDrop: 0.8,
   pipeAgeYears: 12,
   constructionActivity: false,
@@ -176,7 +183,18 @@ export default function MlSimulation() {
     setError(null)
 
     try {
-      const response = await simulateMlCondition(selectedScenario)
+      const input: MlSimulationInput = {
+        pressure: controls.pressure,
+        flowRate: controls.flowRate,
+        valvePosition: controls.valvePosition,
+        supplyOn: controls.supplyOn,
+        constructionActivity: controls.constructionActivity,
+        pipeAgeYears: controls.pipeAgeYears,
+        previousValvePosition: controls.previousValvePosition,
+        pressureLag2: controls.pressureLag2,
+        hydraulicGradeAngleDeg: controls.hydraulicGradeAngleDeg,
+      }
+      const response = await simulateMlCondition(selectedScenario, input)
       setLastResponse(response)
       setResult(response.results[0] ?? null)
       if (!response.results[0]) {
@@ -252,6 +270,57 @@ export default function MlSimulation() {
                 value={controls.valvePosition}
                 onChange={(e) =>
                   setControls((prev) => ({ ...prev, valvePosition: Number(e.target.value) }))
+                }
+                className="mt-2"
+              />
+            </label>
+
+            <label className="block">
+              <span className="font-condensed text-xs uppercase tracking-widest text-dim">
+                Previous Valve Position (%): {controls.previousValvePosition}
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={controls.previousValvePosition}
+                onChange={(e) =>
+                  setControls((prev) => ({ ...prev, previousValvePosition: Number(e.target.value) }))
+                }
+                className="mt-2"
+              />
+            </label>
+
+            <label className="block">
+              <span className="font-condensed text-xs uppercase tracking-widest text-dim">
+                Pressure Before Previous (bar): {controls.pressureLag2.toFixed(1)}
+              </span>
+              <input
+                type="range"
+                min={0.8}
+                max={6.0}
+                step={0.1}
+                value={controls.pressureLag2}
+                onChange={(e) =>
+                  setControls((prev) => ({ ...prev, pressureLag2: Number(e.target.value) }))
+                }
+                className="mt-2"
+              />
+            </label>
+
+            <label className="block">
+              <span className="font-condensed text-xs uppercase tracking-widest text-dim">
+                Hydraulic Grade Angle (deg): {controls.hydraulicGradeAngleDeg.toFixed(1)}
+              </span>
+              <input
+                type="range"
+                min={-15}
+                max={15}
+                step={0.1}
+                value={controls.hydraulicGradeAngleDeg}
+                onChange={(e) =>
+                  setControls((prev) => ({ ...prev, hydraulicGradeAngleDeg: Number(e.target.value) }))
                 }
                 className="mt-2"
               />
@@ -458,6 +527,13 @@ export default function MlSimulation() {
                 <p className="font-condensed text-xs uppercase tracking-widest text-dim">Top 3 Probable Problems</p>
                 <p className="mt-2 font-mono text-xs uppercase leading-6 text-ink">
                   {result.top3_probable_problems || 'No ranked classes returned by classifier'}
+                </p>
+              </div>
+
+              <div className="border-2 border-rule p-4 md:col-span-3">
+                <p className="font-condensed text-xs uppercase tracking-widest text-dim">Model Feature Inputs Used</p>
+                <p className="mt-2 font-mono text-xs uppercase leading-6 text-ink">
+                  Prev valve: {result.prev_valve_position.toFixed(1)}% | Pressure lag-2: {result.pressure_lag_2.toFixed(1)} bar | Hydraulic grade angle: {result.hydraulic_grade_angle_deg.toFixed(2)} deg
                 </p>
               </div>
             </div>

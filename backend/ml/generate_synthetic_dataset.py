@@ -43,6 +43,9 @@ def row_from_label(
     base_flow: float,
     pipe_age_years: int,
     material_risk_score: float,
+    node_elevation_m: float,
+    neighbor_elevation_m: float,
+    pipe_segment_length_m: float,
 ) -> dict[str, object]:
     label = pick_label()
     supply_on = 1 if 5 <= ts.hour <= 22 else 0
@@ -119,6 +122,9 @@ def row_from_label(
         "material_risk_score": material_risk_score,
         "traffic_load_index": traffic_load_index,
         "soil_movement_index": soil_movement_index,
+        "node_elevation_m": float(node_elevation_m),
+        "neighbor_elevation_m": float(neighbor_elevation_m),
+        "pipe_segment_length_m": float(pipe_segment_length_m),
         "construction_flag": construction_flag,
         "event_label": label,
     }
@@ -138,6 +144,9 @@ def main() -> None:
         base_flow = float(np.random.uniform(20.0, 45.0))
         pipe_age_years = int(np.random.randint(5, 28))
         material_risk_score = float(np.clip(np.random.normal(0.35, 0.18), 0.0, 1.0))
+        node_elevation_m = float(np.random.uniform(520.0, 930.0))
+        neighbor_elevation_m = float(node_elevation_m + np.random.uniform(-22.0, 22.0))
+        pipe_segment_length_m = float(np.random.uniform(60.0, 420.0))
 
         for h in range(args.hours):
             ts = start + timedelta(hours=h)
@@ -149,6 +158,9 @@ def main() -> None:
                     base_flow=base_flow,
                     pipe_age_years=pipe_age_years,
                     material_risk_score=material_risk_score,
+                    node_elevation_m=node_elevation_m,
+                    neighbor_elevation_m=neighbor_elevation_m,
+                    pipe_segment_length_m=pipe_segment_length_m,
                 )
             )
 

@@ -46,11 +46,17 @@ Optional columns:
 - `event_label` (for supervised root-cause training)
 - `pipe_age_years`
 - `construction_flag`
+- `node_elevation_m`
+- `neighbor_elevation_m`
+- `pipe_segment_length_m`
 
 ## 3) Features used by model
 
 - raw telemetry: pressure, flow, valve position, supply and control flags
 - pressure differential vs neighbor node
+- previous valve position (`prev_valve_position`)
+- pressure two steps back (`pressure_lag_2`)
+- hydraulic grade angle in degrees (`hydraulic_grade_angle_deg`)
 - pressure and flow deltas
 - rolling pressure mean/std
 - flow-pressure ratio

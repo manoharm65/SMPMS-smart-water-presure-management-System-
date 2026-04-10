@@ -73,13 +73,24 @@ def build_features(df: pd.DataFrame) -> FeatureBuildResult:
         data["traffic_load_index"] = 0.2
     if "soil_movement_index" not in data.columns:
         data["soil_movement_index"] = 0.15
+    if "node_elevation_m" not in data.columns:
+        data["node_elevation_m"] = 0.0
+    if "neighbor_elevation_m" not in data.columns:
+        data["neighbor_elevation_m"] = 0.0
+    if "pipe_segment_length_m" not in data.columns:
+        data["pipe_segment_length_m"] = 100.0
 
     by_node = data.groupby("node_id", group_keys=False)
 
     data["delta_pressure"] = by_node["pressure"].diff().fillna(0.0)
     data["delta_flow"] = by_node["flow_rate"].diff().fillna(0.0)
+    data["prev_valve_position"] = by_node["valve_position"].shift(1).fillna(data["valve_position"])
+    data["pressure_lag_2"] = by_node["pressure"].shift(2).fillna(by_node["pressure"].shift(1)).fillna(data["pressure"])
     data["pressure_gradient"] = data["pressure"] - data["neighbor_pressure"]
     data["pressure_gradient_abs"] = data["pressure_gradient"].abs()
+    elevation_delta_m = data["node_elevation_m"] - data["neighbor_elevation_m"]
+    safe_pipe_length = data["pipe_segment_length_m"].clip(lower=1.0)
+    data["hydraulic_grade_angle_deg"] = np.degrees(np.arctan2(elevation_delta_m, safe_pipe_length))
 
     data["pressure_roll_mean_5"] = by_node["pressure"].transform(
         lambda s: _rolling(s, window=5, stat="mean")
@@ -117,8 +128,14 @@ def build_features(df: pd.DataFrame) -> FeatureBuildResult:
         "supply_on",
         "control_action",
         "neighbor_pressure",
+        "prev_valve_position",
+        "pressure_lag_2",
         "construction_flag",
         "pipe_age_years",
+        "node_elevation_m",
+        "neighbor_elevation_m",
+        "pipe_segment_length_m",
+        "hydraulic_grade_angle_deg",
         "ambient_temp_c",
         "water_temp_c",
         "temp_delta_c",

@@ -115,6 +115,9 @@ export interface MlSimulationResult {
   supply_on: number
   control_action: number
   unexplained_pressure_drop: number
+  prev_valve_position: number
+  pressure_lag_2: number
+  hydraulic_grade_angle_deg: number
   anomaly_flag: number
   anomaly_score: number
   anomaly_threshold: number
@@ -122,6 +125,18 @@ export interface MlSimulationResult {
   possible_problem_if_condition_persists: string
   ml_model_message: string
   top3_probable_problems: string
+}
+
+export interface MlSimulationInput {
+  pressure: number
+  flowRate: number
+  valvePosition: number
+  supplyOn: boolean
+  constructionActivity: boolean
+  pipeAgeYears: number
+  previousValvePosition: number
+  pressureLag2: number
+  hydraulicGradeAngleDeg: number
 }
 
 export interface MlSimulationResponse {
@@ -246,9 +261,14 @@ export async function getMlSimulationScenarios(
 
 export async function simulateMlCondition(
   scenario: MlSimulationScenario,
+  input?: MlSimulationInput,
   cfg?: ApiConfig
 ): Promise<MlSimulationResponse> {
-  return apiPost<MlSimulationResponse>(`${BASE_URL}/ml/simulate`, { scenario }, cfg)
+  return apiPost<MlSimulationResponse>(
+    `${BASE_URL}/ml/simulate`,
+    input ? { scenario, input } : { scenario },
+    cfg
+  )
 }
 
 export async function setValvePosition(
