@@ -12,6 +12,53 @@ export interface MPCConfig {
   learning_rate: number;
   history_size: number;
   dispatch_timeout_ms: number;
+  coupling_enabled: boolean;
+}
+
+export interface HydraulicModel {
+  pump_head_bar: number;
+  elevation_head: Record<string, number>;
+  coupling_matrix: Record<string, Record<string, number>>;
+  base_loss: Record<string, number>;
+  is_calibrated: boolean;
+  last_calibrated?: string;
+}
+
+function parseBoolean(value: string | undefined, fallback: boolean): boolean {
+  if (!value) return fallback;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
+
+function parseHydraulicModel(): HydraulicModel {
+  const defaultModel: HydraulicModel = {
+    pump_head_bar: parseFloat(process.env.MPC_PUMP_HEAD || '6.0'),
+    elevation_head: {},
+    coupling_matrix: {},
+    base_loss: {},
+    is_calibrated: false,
+  };
+  
+  try {
+    const elevRaw = process.env.MPC_ELEVATION_HEAD;
+    if (elevRaw) {
+      defaultModel.elevation_head = JSON.parse(elevRaw);
+    }
+    
+    const matrixRaw = process.env.MPC_COUPLING_MATRIX;
+    if (matrixRaw) {
+      defaultModel.coupling_matrix = JSON.parse(matrixRaw);
+    }
+    
+    const lossRaw = process.env.MPC_BASE_LOSS;
+    if (lossRaw) {
+      defaultModel.base_loss = JSON.parse(lossRaw);
+    }
+  } catch (e) {
+    console.warn('[MPC] Failed to parse hydraulic model from env, using defaults');
+  }
+  
+  return defaultModel;
 }
 
 export const mpcConfigDefaults: MPCConfig = {
@@ -26,6 +73,9 @@ export const mpcConfigDefaults: MPCConfig = {
   max_iterations:     200,
   tolerance:          1e-4,
   learning_rate:      0.8,
-  history_size:       50,       // cycles to keep in memory
-  dispatch_timeout_ms: 5000,    // HTTP timeout for valve command dispatch
+  history_size:       50,
+  dispatch_timeout_ms: 5000,
+  coupling_enabled:   parseBoolean(process.env.MPC_COUPLING_ENABLED, false),
 };
+
+export const defaultHydraulicModel: HydraulicModel = parseHydraulicModel();

@@ -152,9 +152,68 @@ CREATE INDEX IF NOT EXISTS idx_household_flow_dma_time
 CREATE INDEX IF NOT EXISTS idx_illegal_events_household_time
   ON illegal_extraction_events(household_id, onset_time DESC);
 
+CREATE TABLE IF NOT EXISTS integration_events (
+  event_id TEXT PRIMARY KEY,
+  correlation_id TEXT NOT NULL,
+  source_module TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  integration_risk_state TEXT NOT NULL,
+  risk_level TEXT,
+  confidence REAL,
+  node_id TEXT,
+  dma_id TEXT,
+  household_id TEXT,
+  timestamp TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS integration_zone_snapshots (
+  dma_id TEXT PRIMARY KEY,
+  last_updated TEXT NOT NULL,
+  integration_risk_state TEXT NOT NULL,
+  risk_score REAL NOT NULL,
+  contributors_json TEXT NOT NULL,
+  advisory_json TEXT,
+  correlation_id TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_integration_events_dma_time
+  ON integration_events(dma_id, timestamp DESC);
+
+CREATE INDEX IF NOT EXISTS idx_integration_events_risk_time
+  ON integration_events(integration_risk_state, timestamp DESC);
+
+CREATE INDEX IF NOT EXISTS idx_integration_events_source_time
+  ON integration_events(source_module, timestamp DESC);
+
 CREATE TRIGGER IF NOT EXISTS trg_telemetry_to_pressure_readings
 AFTER INSERT ON telemetry
 BEGIN
   INSERT INTO pressure_readings (id, dma_id, pressure_bar, source_node_id, timestamp)
   VALUES (lower(hex(randomblob(16))), NEW.node_id, NEW.pressure, NEW.node_id, NEW.timestamp);
 END;
+
+CREATE TABLE IF NOT EXISTS mpc_hydraulic_model (
+  id TEXT PRIMARY KEY,
+  pump_head_bar REAL NOT NULL DEFAULT 6.0,
+  coupling_matrix_json TEXT NOT NULL,
+  elevation_head_json TEXT NOT NULL,
+  base_loss_json TEXT NOT NULL,
+  is_calibrated INTEGER DEFAULT 0,
+  last_calibrated TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS mpc_calibration_log (
+  id TEXT PRIMARY KEY,
+  timestamp TEXT NOT NULL,
+  source_node TEXT NOT NULL,
+  target_node TEXT NOT NULL,
+  k_ij_measured REAL NOT NULL,
+  method TEXT DEFAULT 'step_test'
+);
+
+CREATE INDEX IF NOT EXISTS idx_mpc_calibration_nodes
+  ON mpc_calibration_log(source_node, target_node);

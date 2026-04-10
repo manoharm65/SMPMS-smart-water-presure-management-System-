@@ -1,9 +1,10 @@
 import { runMPCCycle, MPCNodeState, MPCOptimizationResult } from './mpc.controller.js';
-import { mpcConfigDefaults, MPCConfig } from './mpc.config.js';
+import { mpcConfigDefaults, MPCConfig, defaultHydraulicModel, HydraulicModel } from './mpc.config.js';
 import { eventBus, ActionPayload } from '../../core/event-bus.js';
 import { integrationOrchestrator } from '../integration/integration.orchestrator.js';
 
 let config: MPCConfig = { ...mpcConfigDefaults };
+let hydraulicModel: HydraulicModel = { ...defaultHydraulicModel };
 let timer: NodeJS.Timeout | null = null;
 let running = false;
 
@@ -89,7 +90,11 @@ export async function runCycle() {
       return lastCycle;
     }
 
-    const result = runMPCCycle({ nodes: activeNodes, config });
+    const result = runMPCCycle({ 
+      nodes: activeNodes, 
+      config,
+      hydraulicModel: config.coupling_enabled ? hydraulicModel : undefined,
+    });
     const dispatched = await dispatchAll(result.commands);
 
     integrationOrchestrator.captureMpcCycle({
@@ -135,10 +140,13 @@ function pushHistory(entry: any) {
 export function start() {
   if (!config.enabled) return;
   stop();
+  
+  initializeHydraulicModel(getActiveNodes());
+  
   timer = setInterval(() => {
     runCycle().catch(console.error);
   }, config.interval_ms);
-  console.log('[MPC] Started — interval ' + config.interval_ms + 'ms');
+  console.log('[MPC] Started — interval ' + config.interval_ms + 'ms, coupling: ' + config.coupling_enabled);
 }
 
 export function stop() {
@@ -176,6 +184,37 @@ export function getConfig() {
   return { ...config };
 }
 
+export function getHydraulicModel(): HydraulicModel {
+  return { ...hydraulicModel };
+}
+
+export function updateHydraulicModel(model: Partial<HydraulicModel>): HydraulicModel {
+  hydraulicModel = { ...hydraulicModel, ...model };
+  console.log('[MPC] Hydraulic model updated:', JSON.stringify(hydraulicModel, null, 2));
+  return { ...hydraulicModel };
+}
+
+export function initializeHydraulicModel(nodes: MPCNodeState[]): void {
+  for (const node of nodes) {
+    if (hydraulicModel.elevation_head[node.id] === undefined) {
+      hydraulicModel.elevation_head[node.id] = node.elevation_m;
+    }
+    if (hydraulicModel.base_loss[node.id] === undefined) {
+      hydraulicModel.base_loss[node.id] = 0.2;
+    }
+    if (!hydraulicModel.coupling_matrix[node.id]) {
+      hydraulicModel.coupling_matrix[node.id] = {};
+    }
+    for (const otherNode of nodes) {
+      if (hydraulicModel.coupling_matrix[node.id][otherNode.id] === undefined) {
+        hydraulicModel.coupling_matrix[node.id][otherNode.id] = 
+          node.id === otherNode.id ? 2.5 : 0.5;
+      }
+    }
+  }
+  console.log('[MPC] Hydraulic model initialized for', nodes.length, 'nodes');
+}
+
 export const mpcService = {
   start,
   stop,
@@ -186,4 +225,7 @@ export const mpcService = {
   getNodes,
   updateConfig,
   getConfig,
+  getHydraulicModel,
+  updateHydraulicModel,
+  initializeHydraulicModel,
 };
