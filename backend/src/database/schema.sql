@@ -80,3 +80,81 @@ CREATE TABLE IF NOT EXISTS commands (
   created_at TEXT DEFAULT (datetime('now')),
   FOREIGN KEY (node_id) REFERENCES nodes(node_id)
 );
+
+CREATE TABLE IF NOT EXISTS pressure_readings (
+  id TEXT PRIMARY KEY,
+  dma_id TEXT NOT NULL,
+  pressure_bar REAL NOT NULL,
+  source_node_id TEXT,
+  timestamp TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS household_connections (
+  household_id TEXT PRIMARY KEY,
+  dma_id TEXT NOT NULL,
+  consumer_id TEXT NOT NULL,
+  address TEXT NOT NULL,
+  pipe_diameter_mm INTEGER NOT NULL,
+  pipe_area_m2 REAL NOT NULL,
+  warn_threshold_lps REAL NOT NULL DEFAULT 0.08,
+  alert_threshold_lps REAL NOT NULL DEFAULT 0.15,
+  confirm_window_sec INTEGER NOT NULL DEFAULT 120,
+  cooldown_sec INTEGER NOT NULL DEFAULT 600,
+  api_key_hash TEXT NOT NULL,
+  registered_at TEXT DEFAULT (datetime('now')),
+  is_active INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS household_flow_readings (
+  id TEXT PRIMARY KEY,
+  time TEXT NOT NULL,
+  household_id TEXT NOT NULL,
+  dma_id TEXT NOT NULL,
+  flow_rate_lps REAL NOT NULL,
+  q_theoretical_lps REAL NOT NULL,
+  q_excess_lps REAL NOT NULL,
+  detection_state TEXT NOT NULL,
+  severity_score REAL NOT NULL,
+  signal_quality TEXT NOT NULL,
+  pressure_source_bar REAL NOT NULL,
+  rssi_dbm INTEGER,
+  firmware_version TEXT,
+  FOREIGN KEY (household_id) REFERENCES household_connections(household_id)
+);
+
+CREATE TABLE IF NOT EXISTS illegal_extraction_events (
+  id TEXT PRIMARY KEY,
+  household_id TEXT NOT NULL,
+  dma_id TEXT NOT NULL,
+  onset_time TEXT NOT NULL,
+  resolved_time TEXT,
+  q_excess_lps REAL NOT NULL,
+  severity TEXT NOT NULL,
+  severity_score REAL NOT NULL,
+  webhook_fired INTEGER NOT NULL DEFAULT 0,
+  webhook_attempts INTEGER NOT NULL DEFAULT 0,
+  webhook_status TEXT,
+  resolved INTEGER NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (household_id) REFERENCES household_connections(household_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pressure_readings_dma_time
+  ON pressure_readings(dma_id, timestamp DESC);
+
+CREATE INDEX IF NOT EXISTS idx_household_flow_household_time
+  ON household_flow_readings(household_id, time DESC);
+
+CREATE INDEX IF NOT EXISTS idx_household_flow_dma_time
+  ON household_flow_readings(dma_id, time DESC);
+
+CREATE INDEX IF NOT EXISTS idx_illegal_events_household_time
+  ON illegal_extraction_events(household_id, onset_time DESC);
+
+CREATE TRIGGER IF NOT EXISTS trg_telemetry_to_pressure_readings
+AFTER INSERT ON telemetry
+BEGIN
+  INSERT INTO pressure_readings (id, dma_id, pressure_bar, source_node_id, timestamp)
+  VALUES (lower(hex(randomblob(16))), NEW.node_id, NEW.pressure, NEW.node_id, NEW.timestamp);
+END;
