@@ -6,33 +6,47 @@ export default function ZonePolygon({
   name,
   points,
   onSelect,
+  selected = false,
+  dimmed = false,
+  fillColor = '#00C896',
+  borderColor = '#ffffff',
+  fillOpacity = 0.4,
 }: {
   id: string
   name: string
   points: LatLngTuple[]
   onSelect?: (zoneId: string) => void
+  selected?: boolean
+  dimmed?: boolean
+  fillColor?: string
+  borderColor?: string
+  fillOpacity?: number
 }) {
+  const baseFillOpacity = dimmed ? 0.1 : fillOpacity
+  const strokeOpacity = dimmed ? 0.22 : selected ? 0.85 : 0.45
+
   return (
     <Polygon
       positions={points}
       pathOptions={{
-        color: 'rgba(255,255,255,0.18)',
-        weight: 1,
-        fillColor: 'rgba(0,200,150,0.06)',
-        fillOpacity: 0.4,
+        color: borderColor,
+        weight: selected ? 2 : 1,
+        opacity: strokeOpacity,
+        fillColor,
+        fillOpacity: baseFillOpacity,
       }}
       eventHandlers={{
         click: () => onSelect?.(id),
         mouseover: (e) => {
           ;(e.target as any)?.setStyle?.({
-            fillOpacity: 0.55,
-            color: 'rgba(255,255,255,0.28)',
+            fillOpacity: Math.min(0.72, baseFillOpacity + 0.14),
+            opacity: Math.min(1, strokeOpacity + 0.2),
           })
         },
         mouseout: (e) => {
           ;(e.target as any)?.setStyle?.({
-            fillOpacity: 0.4,
-            color: 'rgba(255,255,255,0.18)',
+            fillOpacity: baseFillOpacity,
+            opacity: strokeOpacity,
           })
         },
       }}

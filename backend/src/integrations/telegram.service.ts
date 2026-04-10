@@ -281,6 +281,43 @@ The automatic control system will now manage the valve position based on current
       return false;
     }
   }
+
+  async sendMlSimulationMilestone(payload: {
+    totalPredictions: number;
+    milestone: number;
+    datasetPath: string;
+    latestScenario: string;
+  }): Promise<boolean> {
+    const telegramBot = getBot();
+
+    if (!telegramBot) {
+      console.log('[Telegram] Bot not configured. Skipping ML simulation milestone notification.');
+      return false;
+    }
+
+    const message = `📊 <b>ML Simulation Dataset Milestone</b>
+
+<b>Total Predictions Stored:</b> ${payload.totalPredictions}
+<b>Milestone:</b> ${payload.milestone}
+<b>Latest Scenario:</b> ${payload.latestScenario}
+<b>Dataset:</b> Attached CSV snapshot
+<b>Time:</b> ${new Date().toISOString()}`;
+
+    try {
+      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      const telegramBotAny = telegramBot as unknown as {
+        sendDocument: (chatId: string, doc: string, opts?: { caption?: string }) => Promise<unknown>;
+      };
+      await telegramBotAny.sendDocument(config.telegramChatId, payload.datasetPath, {
+        caption: `ML simulation dataset snapshot at ${payload.totalPredictions} predictions`,
+      });
+      console.log(`[Telegram] ML simulation milestone sent (${payload.totalPredictions})`);
+      return true;
+    } catch (err) {
+      console.error('[Telegram] Failed to send ML simulation milestone:', err);
+      return false;
+    }
+  }
 }
 
 export const telegramService = new TelegramService();

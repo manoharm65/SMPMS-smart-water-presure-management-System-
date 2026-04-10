@@ -40,8 +40,14 @@ export type ZoneGeo = {
   centroid: LatLngTuple
 }
 
+export type MapMode = 'map' | 'dma'
+
 type DashboardState = {
   connection: SocketStatus
+  mapMode: MapMode
+  selectedDmaId: string | null
+  hardwareModeEnabled: boolean
+  activeHardwareDmaId: string | null
   selectedValveId: string | null
   selectedPipelineId: string | null
   mapDataStatus: 'demo' | 'loading' | 'ready' | 'error'
@@ -51,6 +57,10 @@ type DashboardState = {
   zonesGeo: ZoneGeo[]
 
   setConnection: (status: SocketStatus) => void
+  setMapMode: (mode: MapMode) => void
+  selectDma: (dmaId: string | null) => void
+  setHardwareModeEnabled: (enabled: boolean) => void
+  setActiveHardwareDma: (dmaId: string | null) => void
   selectValve: (valveId: string | null) => void
   selectPipeline: (pipelineId: string | null) => void
   upsertTelemetry: (evt: PressureUpdateEvent) => void
@@ -69,8 +79,18 @@ function statusFromPressure(pressure: number): PressureStatus {
   return 'normal'
 }
 
+function statusFromTelemetry(evt: PressureUpdateEvent): PressureStatus {
+  if (evt.anomalyScore >= 0.85) return 'critical'
+  if (evt.anomalyScore >= 0.65) return 'warning'
+  return statusFromPressure(evt.pressure)
+}
+
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   connection: { status: 'offline' },
+  mapMode: 'map',
+  selectedDmaId: null,
+  hardwareModeEnabled: false,
+  activeHardwareDmaId: null,
   selectedValveId: null,
   selectedPipelineId: null,
   mapDataStatus: 'loading',
@@ -80,8 +100,19 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   zonesGeo: [],
 
   setConnection: (status) => set({ connection: status }),
-  selectValve: (valveId) => set({ selectedValveId: valveId, selectedPipelineId: null }),
-  selectPipeline: (pipelineId) => set({ selectedPipelineId: pipelineId, selectedValveId: null }),
+  setMapMode: (mode) => set({ mapMode: mode }),
+  selectDma: (dmaId) =>
+    set({
+      selectedDmaId: dmaId,
+      selectedPipelineId: null,
+      selectedValveId: null,
+    }),
+  setHardwareModeEnabled: (enabled) => set({ hardwareModeEnabled: enabled }),
+  setActiveHardwareDma: (dmaId) => set({ activeHardwareDmaId: dmaId }),
+  selectValve: (valveId) =>
+    set({ selectedValveId: valveId, selectedPipelineId: null, selectedDmaId: null }),
+  selectPipeline: (pipelineId) =>
+    set({ selectedPipelineId: pipelineId, selectedValveId: null, selectedDmaId: null }),
   setMapLayers: (layers) =>
     set({
       zonesGeo: layers.zonesGeo,
@@ -98,7 +129,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         [evt.zoneId]: {
           ...evt,
           zoneName,
-          status: statusFromPressure(evt.pressure),
+          status: statusFromTelemetry(evt),
           updatedAt: Date.now(),
         },
       },

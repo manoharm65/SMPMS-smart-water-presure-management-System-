@@ -1,10 +1,11 @@
 import { spawn } from 'child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { config } from '../../core/config.js';
 import { nodeRepository } from '../../repositories/node.repository.js';
 import { telemetryRepository } from '../../repositories/telemetry.repository.js';
+import { telegramService } from '../../integrations/telegram.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const backendRoot = resolve(__dirname, '../../../');
@@ -69,6 +70,14 @@ export interface MlRuntimeStatus {
   modelPath: string;
 }
 
+export interface MlSimulationMilestoneInfo {
+  totalPredictions: number;
+  milestoneHit: boolean;
+  milestoneEvery: number;
+  milestoneValue?: number;
+  webAlertMessage?: string;
+}
+
 function resolveBackendPath(pathLike: string): string {
   if (!pathLike) return pathLike;
   if (pathLike.includes(':') || pathLike.startsWith('/') || pathLike.startsWith('\\')) {
@@ -121,6 +130,8 @@ export class MlRuntimeService {
   private readonly inputPath: string;
   private readonly predictionsPath: string;
   private readonly simulationOutPath: string;
+  private readonly simulationDatasetPath: string;
+  private readonly simulationMetaPath: string;
 
   constructor() {
     this.schedulerEnabled = readBoolEnv(
@@ -141,6 +152,12 @@ export class MlRuntimeService {
     this.simulationOutPath = resolveBackendPath(
       readFirstDefinedEnv(['ML_SIMULATION_OUTPUT_CSV'], './ml/artifacts/scenario_simulation_results.csv')
     );
+    this.simulationDatasetPath = resolveBackendPath(
+      readFirstDefinedEnv(['ML_SIMULATION_DATASET_CSV'], './ml/artifacts/simulation_predictions_dataset.csv')
+    );
+    this.simulationMetaPath = resolveBackendPath(
+      readFirstDefinedEnv(['ML_SIMULATION_META_JSON'], './ml/artifacts/simulation_predictions_meta.json')
+    );
   }
 
   getSimulationScenarios(): readonly string[] {
@@ -150,7 +167,7 @@ export class MlRuntimeService {
   async simulateCondition(
     scenario: MlSimulationScenario = 'all',
     overrides?: MlSimulationOverrides
-  ): Promise<MlSimulationResult[]> {
+  ): Promise<{ results: MlSimulationResult[]; milestone: MlSimulationMilestoneInfo }> {
     if (scenario !== 'all' && !ML_SIMULATION_SCENARIOS.includes(scenario)) {
       throw new Error(`Invalid scenario: ${scenario}`);
     }
@@ -217,7 +234,122 @@ export class MlRuntimeService {
 
     const jsonText = stdout.slice(start + startMarker.length, end).trim();
     const parsed = JSON.parse(jsonText) as { results?: MlSimulationResult[] };
-    return parsed.results ?? [];
+    const results = parsed.results ?? [];
+    const milestone = await this.persistSimulationResults(results, scenario);
+    return { results, milestone };
+  }
+
+  private async persistSimulationResults(
+    results: MlSimulationResult[],
+    scenario: MlSimulationScenario
+  ): Promise<MlSimulationMilestoneInfo> {
+    const milestoneEvery = 100;
+
+    const meta = this.loadSimulationMeta();
+    const previous = meta.totalPredictions;
+    const nowIso = new Date().toISOString();
+
+    if (results.length > 0) {
+      mkdirSync(dirname(this.simulationDatasetPath), { recursive: true });
+      const header = [
+        'saved_at',
+        'scenario_request',
+        'scenario',
+        'pressure',
+        'flow_rate',
+        'supply_on',
+        'control_action',
+        'unexplained_pressure_drop',
+        'prev_valve_position',
+        'pressure_lag_2',
+        'hydraulic_grade_angle_deg',
+        'anomaly_flag',
+        'anomaly_score',
+        'anomaly_threshold',
+        'predicted_possible_problem',
+        'possible_problem_if_condition_persists',
+        'ml_model_message',
+        'top3_probable_problems',
+      ].join(',');
+
+      if (!existsSync(this.simulationDatasetPath)) {
+        writeFileSync(this.simulationDatasetPath, `${header}\n`, 'utf-8');
+      }
+
+      const lines = results.map((r) => [
+        toCsvValue(nowIso),
+        toCsvValue(scenario),
+        toCsvValue(r.scenario),
+        toCsvValue(r.pressure),
+        toCsvValue(r.flow_rate),
+        toCsvValue(r.supply_on),
+        toCsvValue(r.control_action),
+        toCsvValue(r.unexplained_pressure_drop),
+        toCsvValue(r.prev_valve_position),
+        toCsvValue(r.pressure_lag_2),
+        toCsvValue(r.hydraulic_grade_angle_deg),
+        toCsvValue(r.anomaly_flag),
+        toCsvValue(r.anomaly_score),
+        toCsvValue(r.anomaly_threshold),
+        toCsvValue(r.predicted_possible_problem),
+        toCsvValue(r.possible_problem_if_condition_persists),
+        toCsvValue(r.ml_model_message),
+        toCsvValue(r.top3_probable_problems),
+      ].join(','));
+
+      appendFileSync(this.simulationDatasetPath, `${lines.join('\n')}\n`, 'utf-8');
+    }
+
+    const total = previous + results.length;
+    meta.totalPredictions = total;
+    meta.updatedAt = nowIso;
+    this.saveSimulationMeta(meta);
+
+    const previousBucket = Math.floor(previous / milestoneEvery);
+    const currentBucket = Math.floor(total / milestoneEvery);
+    const milestoneHit = currentBucket > previousBucket;
+    const milestoneValue = milestoneHit ? currentBucket * milestoneEvery : undefined;
+
+    if (milestoneHit && milestoneValue) {
+      const latestScenario = results[results.length - 1]?.scenario ?? String(scenario);
+      await telegramService.sendMlSimulationMilestone({
+        totalPredictions: total,
+        milestone: milestoneValue,
+        datasetPath: this.simulationDatasetPath,
+        latestScenario,
+      });
+    }
+
+    return {
+      totalPredictions: total,
+      milestoneHit,
+      milestoneEvery,
+      milestoneValue,
+      webAlertMessage: milestoneHit
+        ? `Milestone reached: ${milestoneValue} simulation predictions saved. Dataset was sent to Telegram.`
+        : undefined,
+    };
+  }
+
+  private loadSimulationMeta(): { totalPredictions: number; updatedAt?: string } {
+    if (!existsSync(this.simulationMetaPath)) {
+      return { totalPredictions: 0 };
+    }
+    try {
+      const text = readFileSync(this.simulationMetaPath, 'utf-8');
+      const parsed = JSON.parse(text) as { totalPredictions?: number; updatedAt?: string };
+      return {
+        totalPredictions: Number.isFinite(parsed.totalPredictions) ? Number(parsed.totalPredictions) : 0,
+        updatedAt: parsed.updatedAt,
+      };
+    } catch {
+      return { totalPredictions: 0 };
+    }
+  }
+
+  private saveSimulationMeta(meta: { totalPredictions: number; updatedAt?: string }): void {
+    mkdirSync(dirname(this.simulationMetaPath), { recursive: true });
+    writeFileSync(this.simulationMetaPath, JSON.stringify(meta, null, 2), 'utf-8');
   }
 
   startScheduler(): void {

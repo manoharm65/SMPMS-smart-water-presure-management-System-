@@ -143,6 +143,13 @@ export interface MlSimulationResponse {
   scenario: MlSimulationScenario
   count: number
   results: MlSimulationResult[]
+  milestone?: {
+    totalPredictions: number
+    milestoneHit: boolean
+    milestoneEvery: number
+    milestoneValue?: number
+    webAlertMessage?: string
+  }
 }
 
 const defaultBaseUrl = (import.meta as any).env?.VITE_API_BASE_URL as
@@ -292,6 +299,17 @@ export async function revertValveToAuto(
     {},
     cfg
   )
+}
+
+export async function triggerManualAlert(
+  payload: {
+    nodeId: string
+    message: string
+    riskLevel: 'WARNING' | 'CRITICAL' | 'LOW'
+  },
+  cfg?: ApiConfig
+): Promise<{ success: boolean }> {
+  return apiPost<{ success: boolean }>('/api/v1/alerts/trigger', payload, cfg)
 }
 
 // =============================================================================
