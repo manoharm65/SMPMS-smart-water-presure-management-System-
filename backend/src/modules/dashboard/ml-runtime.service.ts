@@ -30,6 +30,9 @@ export interface MlSimulationResult {
   supply_on: number;
   control_action: number;
   unexplained_pressure_drop: number;
+  prev_valve_position: number;
+  pressure_lag_2: number;
+  hydraulic_grade_angle_deg: number;
   anomaly_flag: number;
   anomaly_score: number;
   anomaly_threshold: number;
@@ -37,6 +40,18 @@ export interface MlSimulationResult {
   possible_problem_if_condition_persists: string;
   ml_model_message: string;
   top3_probable_problems: string;
+}
+
+export interface MlSimulationOverrides {
+  pressure?: number;
+  flowRate?: number;
+  valvePosition?: number;
+  supplyOn?: boolean;
+  constructionActivity?: boolean;
+  pipeAgeYears?: number;
+  previousValvePosition?: number;
+  pressureLag2?: number;
+  hydraulicGradeAngleDeg?: number;
 }
 
 export interface MlRuntimeStatus {
@@ -132,7 +147,10 @@ export class MlRuntimeService {
     return ML_SIMULATION_SCENARIOS;
   }
 
-  async simulateCondition(scenario: MlSimulationScenario = 'all'): Promise<MlSimulationResult[]> {
+  async simulateCondition(
+    scenario: MlSimulationScenario = 'all',
+    overrides?: MlSimulationOverrides
+  ): Promise<MlSimulationResult[]> {
     if (scenario !== 'all' && !ML_SIMULATION_SCENARIOS.includes(scenario)) {
       throw new Error(`Invalid scenario: ${scenario}`);
     }
@@ -152,6 +170,40 @@ export class MlRuntimeService {
       this.simulationOutPath,
       '--json-stdout',
     ];
+
+    if (typeof overrides?.pressure === 'number' && Number.isFinite(overrides.pressure)) {
+      args.push('--override-pressure', String(overrides.pressure));
+    }
+    if (typeof overrides?.flowRate === 'number' && Number.isFinite(overrides.flowRate)) {
+      args.push('--override-flow-rate', String(overrides.flowRate));
+    }
+    if (typeof overrides?.valvePosition === 'number' && Number.isFinite(overrides.valvePosition)) {
+      args.push('--override-valve-position', String(overrides.valvePosition));
+    }
+    if (typeof overrides?.supplyOn === 'boolean') {
+      args.push('--override-supply-on', overrides.supplyOn ? '1' : '0');
+    }
+    if (typeof overrides?.constructionActivity === 'boolean') {
+      args.push('--override-construction-flag', overrides.constructionActivity ? '1' : '0');
+    }
+    if (typeof overrides?.pipeAgeYears === 'number' && Number.isFinite(overrides.pipeAgeYears)) {
+      args.push('--override-pipe-age-years', String(overrides.pipeAgeYears));
+    }
+    if (
+      typeof overrides?.previousValvePosition === 'number' &&
+      Number.isFinite(overrides.previousValvePosition)
+    ) {
+      args.push('--override-prev-valve-position', String(overrides.previousValvePosition));
+    }
+    if (typeof overrides?.pressureLag2 === 'number' && Number.isFinite(overrides.pressureLag2)) {
+      args.push('--override-pressure-lag-2', String(overrides.pressureLag2));
+    }
+    if (
+      typeof overrides?.hydraulicGradeAngleDeg === 'number' &&
+      Number.isFinite(overrides.hydraulicGradeAngleDeg)
+    ) {
+      args.push('--override-hydraulic-grade-angle-deg', String(overrides.hydraulicGradeAngleDeg));
+    }
 
     const { stdout } = await this.runProcessCapture(this.pythonBin, args, 'simulate');
 

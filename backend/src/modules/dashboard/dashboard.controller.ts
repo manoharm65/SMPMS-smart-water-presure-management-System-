@@ -1,6 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { dashboardService } from './dashboard.service.js';
-import { ML_SIMULATION_SCENARIOS, MlSimulationScenario, mlRuntimeService } from './ml-runtime.service.js';
+import {
+  ML_SIMULATION_SCENARIOS,
+  MlSimulationOverrides,
+  MlSimulationScenario,
+  mlRuntimeService,
+} from './ml-runtime.service.js';
 
 const router = Router();
 
@@ -93,6 +98,23 @@ router.post('/ml/simulate', async (req: Request, res: Response) => {
   try {
     const requested = req.body?.scenario;
     const scenario = (typeof requested === 'string' && requested.length > 0 ? requested : 'all') as MlSimulationScenario;
+    const input = req.body?.input;
+    const overrides: MlSimulationOverrides = typeof input === 'object' && input !== null
+      ? {
+          pressure: typeof input.pressure === 'number' ? input.pressure : undefined,
+          flowRate: typeof input.flowRate === 'number' ? input.flowRate : undefined,
+          valvePosition: typeof input.valvePosition === 'number' ? input.valvePosition : undefined,
+          supplyOn: typeof input.supplyOn === 'boolean' ? input.supplyOn : undefined,
+          constructionActivity:
+            typeof input.constructionActivity === 'boolean' ? input.constructionActivity : undefined,
+          pipeAgeYears: typeof input.pipeAgeYears === 'number' ? input.pipeAgeYears : undefined,
+          previousValvePosition:
+            typeof input.previousValvePosition === 'number' ? input.previousValvePosition : undefined,
+          pressureLag2: typeof input.pressureLag2 === 'number' ? input.pressureLag2 : undefined,
+          hydraulicGradeAngleDeg:
+            typeof input.hydraulicGradeAngleDeg === 'number' ? input.hydraulicGradeAngleDeg : undefined,
+        }
+      : {};
 
     if (scenario !== 'all' && !ML_SIMULATION_SCENARIOS.includes(scenario)) {
       res.status(400).json({
@@ -102,7 +124,7 @@ router.post('/ml/simulate', async (req: Request, res: Response) => {
       return;
     }
 
-    const results = await mlRuntimeService.simulateCondition(scenario);
+    const results = await mlRuntimeService.simulateCondition(scenario, overrides);
     res.json({
       scenario,
       count: results.length,
