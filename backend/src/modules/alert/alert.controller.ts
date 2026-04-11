@@ -4,6 +4,22 @@ import { AuthenticatedRequest } from '../auth/auth.middleware.js';
 
 const router = Router();
 
+// POST /alerts/trigger
+router.post('/trigger', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { nodeId, message, riskLevel } = req.body ?? {};
+  if (typeof nodeId !== 'string' || typeof message !== 'string' || typeof riskLevel !== 'string') {
+    res.status(400).json({ error: 'nodeId, message, riskLevel are required' });
+    return;
+  }
+
+  try {
+    await alertService.triggerManual({ nodeId, message, riskLevel });
+    res.status(201).json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message ?? 'Failed to trigger alert' });
+  }
+});
+
 // GET /alerts
 router.get('/', (req: AuthenticatedRequest, res: Response): void => {
   const { limit, offset, unacknowledged } = req.query;

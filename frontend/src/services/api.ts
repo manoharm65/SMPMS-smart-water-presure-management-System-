@@ -115,9 +115,6 @@ export interface MlSimulationResult {
   supply_on: number
   control_action: number
   unexplained_pressure_drop: number
-  prev_valve_position: number
-  pressure_lag_2: number
-  hydraulic_grade_angle_deg: number
   anomaly_flag: number
   anomaly_score: number
   anomaly_threshold: number
@@ -127,16 +124,24 @@ export interface MlSimulationResult {
   top3_probable_problems: string
 }
 
-export interface MlSimulationInput {
-  pressure: number
-  flowRate: number
-  valvePosition: number
-  supplyOn: boolean
-  constructionActivity: boolean
-  pipeAgeYears: number
-  previousValvePosition: number
-  pressureLag2: number
-  hydraulicGradeAngleDeg: number
+export interface MpcStatus {
+  lastRun: string | null;
+  isRunning: boolean;
+  status: string;
+  logs?: string[];
+  last_cycle?: any;
+}
+
+// =============================================================================
+// MPC Status & Actions
+// =============================================================================
+
+export async function getMpcStatus(cfg?: ApiConfig): Promise<MpcStatus> {
+  return apiGet<MpcStatus>('/api/v1/mpc/status', cfg)
+}
+
+export async function runMpcNow(cfg?: ApiConfig): Promise<any> {
+  return apiPost<any>('/api/v1/mpc/run', {}, cfg)
 }
 
 export interface MlSimulationResponse {
@@ -261,14 +266,9 @@ export async function getMlSimulationScenarios(
 
 export async function simulateMlCondition(
   scenario: MlSimulationScenario,
-  input?: MlSimulationInput,
   cfg?: ApiConfig
 ): Promise<MlSimulationResponse> {
-  return apiPost<MlSimulationResponse>(
-    `${BASE_URL}/ml/simulate`,
-    input ? { scenario, input } : { scenario },
-    cfg
-  )
+  return apiPost<MlSimulationResponse>(`${BASE_URL}/ml/simulate`, { scenario }, cfg)
 }
 
 export async function setValvePosition(

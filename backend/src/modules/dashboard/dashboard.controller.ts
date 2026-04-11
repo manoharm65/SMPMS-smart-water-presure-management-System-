@@ -124,11 +124,12 @@ router.post('/ml/simulate', async (req: Request, res: Response) => {
       return;
     }
 
-    const results = await mlRuntimeService.simulateCondition(scenario, overrides);
+    const simulation = await mlRuntimeService.simulateCondition(scenario, overrides);
     res.json({
       scenario,
-      count: results.length,
-      results,
+      count: simulation.results.length,
+      results: simulation.results,
+      milestone: simulation.milestone,
     });
   } catch (err) {
     console.error('[Dashboard] Error running ML simulation:', err);

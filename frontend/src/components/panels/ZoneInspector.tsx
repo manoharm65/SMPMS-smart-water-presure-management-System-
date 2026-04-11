@@ -13,11 +13,47 @@ function Metric({ label, value }: { label: string; value: string }) {
 }
 
 export default function ZoneInspector() {
+  const connection = useDashboardStore((s) => s.connection)
+  const selectedDmaId = useDashboardStore((s) => s.selectedDmaId)
+  const hardwareModeEnabled = useDashboardStore((s) => s.hardwareModeEnabled)
+  const activeHardwareDmaId = useDashboardStore((s) => s.activeHardwareDmaId)
   const selectedValveId = useDashboardStore((s) => s.selectedValveId)
   const selectedPipelineId = useDashboardStore((s) => s.selectedPipelineId)
   const valves = useDashboardStore((s) => s.valves)
   const pipelines = useDashboardStore((s) => s.pipelines)
   const zones = useDashboardStore((s) => s.zones)
+  const zonesGeo = useDashboardStore((s) => s.zonesGeo)
+
+  const selectedDmaMeta = useMemo(
+    () => (selectedDmaId ? zonesGeo.find((z) => z.id === selectedDmaId) : null),
+    [selectedDmaId, zonesGeo],
+  )
+
+  const dmaTelemetry = selectedDmaId ? zones[selectedDmaId] : undefined
+
+  const dmaCounts = useMemo(() => {
+    if (!selectedDmaId) return null
+
+    const dmaPipelines = pipelines.filter((p) => p.zoneId === selectedDmaId)
+    const dmaValves = valves.filter((v) => v.zoneId === selectedDmaId)
+
+    const tankLikeWords = ['tank', 'reservoir', 'esr', 'oht', 'ugr']
+    const tanks = dmaValves.filter((v) => {
+      const props = v.properties
+      if (!props) return false
+      const blob = Object.entries(props)
+        .map(([k, val]) => `${k}:${String(val ?? '')}`)
+        .join(' ')
+        .toLowerCase()
+      return tankLikeWords.some((w) => blob.includes(w))
+    })
+
+    return {
+      pipelines: dmaPipelines.length,
+      valves: dmaValves.length,
+      tanks: tanks.length,
+    }
+  }, [pipelines, selectedDmaId, valves])
 
   const data = useMemo(() => {
     if (selectedValveId) {
@@ -68,26 +104,75 @@ export default function ZoneInspector() {
         </div>
         <div className="mt-1 flex items-baseline justify-between">
           <div className="text-sm font-semibold text-text">
-            {!data
-              ? 'Select a pipeline or asset'
-              : data.kind === 'valve'
-                ? data.valve.name
-                : data.pipeline.id}
+            {selectedDmaId
+              ? selectedDmaMeta?.name ?? selectedDmaId
+              : !data
+                ? 'Select a DMA, pipeline, or asset'
+                : data.kind === 'valve'
+                  ? data.valve.name
+                  : data.pipeline.id}
           </div>
           <div className="font-mono text-xs text-text-faint">
-            {!data
-              ? '--'
-              : data.kind === 'valve'
-                ? data.valve.zoneId
-                : data.pipeline.zoneId}
+            {selectedDmaId
+              ? selectedDmaId
+              : !data
+                ? '--'
+                : data.kind === 'valve'
+                  ? data.valve.zoneId
+                  : data.pipeline.zoneId}
           </div>
         </div>
       </div>
 
       <div className="px-3 py-1">
-        {!data ? (
+        {selectedDmaId && dmaCounts ? (
+          <>
+            <div className="mt-2 rounded border border-border bg-bg px-2 py-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] uppercase tracking-wider text-text-faint">
+                  DMA Focus
+                </div>
+                <div className="font-mono text-xs text-text">
+                  {selectedDmaMeta?.id ?? selectedDmaId}
+                </div>
+              </div>
+              <div className="mt-1 text-xs text-text-muted">{selectedDmaMeta?.name ?? 'Selected DMA'}</div>
+            </div>
+
+            <Metric label="Pipelines" value={String(dmaCounts.pipelines)} />
+            <Metric label="Valves" value={String(dmaCounts.valves)} />
+            <Metric label="Tanks" value={String(dmaCounts.tanks)} />
+            <Metric
+              label="AI Status"
+              value={(dmaTelemetry?.status ?? 'unknown').toUpperCase()}
+            />
+            <Metric
+              label="Pressure"
+              value={dmaTelemetry ? `${dmaTelemetry.pressure.toFixed(2)} bar` : '--'}
+            />
+            <Metric
+              label="Flow Rate"
+              value={dmaTelemetry ? `${dmaTelemetry.flowRate.toFixed(1)} L/s` : '--'}
+            />
+
+            <div className="mt-3 rounded border border-border bg-bg px-2 py-2">
+              <div className="text-[11px] uppercase tracking-wider text-text-faint">
+                Hardware Mode
+              </div>
+              <div className="mt-1 text-xs text-text-muted">
+                Mode: {hardwareModeEnabled ? 'ON' : 'OFF'}
+              </div>
+              <div className="mt-1 text-xs text-text-muted">
+                Active DMA: {activeHardwareDmaId ?? '--'}
+              </div>
+              <div className="mt-1 text-xs text-text-muted">
+                Socket: {connection.status.toUpperCase()}
+              </div>
+            </div>
+          </>
+        ) : !data ? (
           <div className="py-3 text-sm text-text-muted">
-            Click a pipeline or asset node to inspect its properties.
+            Click a DMA, pipeline, or asset node to inspect details.
           </div>
         ) : (
           <>

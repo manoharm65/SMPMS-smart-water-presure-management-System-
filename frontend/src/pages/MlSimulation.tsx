@@ -108,6 +108,7 @@ export default function MlSimulation() {
   const [result, setResult] = useState<MlSimulationResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [lastResponse, setLastResponse] = useState<MlSimulationResponse | null>(null)
+  const [webMilestoneAlert, setWebMilestoneAlert] = useState<string | null>(null)
 
   const inferredScenario = useMemo(() => inferScenarioFromControls(controls), [controls])
   const selectedScenario = scenarioMode === 'auto' ? inferredScenario : manualScenario
@@ -197,6 +198,7 @@ export default function MlSimulation() {
       const response = await simulateMlCondition(selectedScenario, input)
       setLastResponse(response)
       setResult(response.results[0] ?? null)
+      setWebMilestoneAlert(response.milestone?.webAlertMessage ?? null)
       if (!response.results[0]) {
         setError('Simulation completed but no prediction was returned by the model.')
       }
@@ -464,6 +466,7 @@ export default function MlSimulation() {
                 setControls(defaultControls)
                 setResult(null)
                 setLastResponse(null)
+                setWebMilestoneAlert(null)
                 setError(null)
                 setScenarioMode('auto')
               }}
@@ -476,6 +479,12 @@ export default function MlSimulation() {
           {error ? (
             <p className="mt-4 border-l-4 border-signal bg-signal/10 px-3 py-2 font-mono text-xs text-signal">
               {error}
+            </p>
+          ) : null}
+
+          {webMilestoneAlert ? (
+            <p className="mt-4 border-l-4 border-pass bg-pass/10 px-3 py-2 font-mono text-xs text-pass">
+              {webMilestoneAlert}
             </p>
           ) : null}
 
@@ -546,6 +555,9 @@ export default function MlSimulation() {
           {lastResponse ? (
             <p className="mt-4 font-mono text-[11px] uppercase tracking-wide text-dim">
               Returned rows: {lastResponse.count} | Scenario: {formatEventName(lastResponse.scenario)}
+              {lastResponse.milestone
+                ? ` | Stored predictions: ${lastResponse.milestone.totalPredictions}`
+                : ''}
             </p>
           ) : null}
         </div>

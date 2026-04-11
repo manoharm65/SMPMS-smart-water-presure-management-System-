@@ -5,7 +5,7 @@ const navItems = [
   { to: '/map', label: 'MAP VIEW' },
   { to: '/overview', label: 'OVERVIEW' },
   { to: '/alerts', label: 'ALERTS' },
-  { to: '/analytics', label: 'ANALYTICS' },
+  // { to: '/analytics', label: 'ANALYTICS' },
   { to: '/ml-simulation', label: 'ML SIM' },
 ]
 

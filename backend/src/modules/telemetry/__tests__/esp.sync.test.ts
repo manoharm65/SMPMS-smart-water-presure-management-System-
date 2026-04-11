@@ -5,11 +5,11 @@ import { NodeRepository } from '../../../repositories/node.repository';
 import { TelemetryRepository } from '../../../repositories/telemetry.repository';
 
 // Mock dependencies
-jest.mock('../../../repositories/node.repository');
-jest.mock('../../../repositories/telemetry.repository');
+vi.mock('../../../repositories/node.repository');
+vi.mock('../../../repositories/telemetry.repository');
 
-const MockedNodeRepository = NodeRepository as jest.MockedClass<typeof NodeRepository>;
-const MockedTelemetryRepository = TelemetryRepository as jest.MockedClass<typeof TelemetryRepository>;
+const MockedNodeRepository = NodeRepository as any;
+const MockedTelemetryRepository = TelemetryRepository as any;
 
 describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
   let app: Express;
@@ -28,7 +28,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     telemetryService = new TelemetryService();
 
     app = express();
@@ -54,7 +54,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
   });
 
   afterEach(() => {
-    jest.resetModules();
+    vi.resetModules();
   });
 
   describe('Authentication', () => {

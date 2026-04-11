@@ -7,6 +7,7 @@ export type SocketStatus = {
 
 export type PressureSocketOptions = {
   url?: string
+  mockZoneIds?: string[]
   onEvent: (evt: PressureUpdateEvent) => void
   onStatus: (status: SocketStatus) => void
 }
@@ -21,8 +22,14 @@ function safeJsonParse<T>(raw: string): T | null {
   }
 }
 
-function startMockStream(onEvent: (evt: PressureUpdateEvent) => void): Closable {
-  const zoneIds = ['DMA-01', 'DMA-02', 'DMA-03', 'DMA-04', 'DMA-05']
+function startMockStream(
+  onEvent: (evt: PressureUpdateEvent) => void,
+  zoneIdsInput?: string[],
+): Closable {
+  const zoneIds =
+    zoneIdsInput && zoneIdsInput.length > 0
+      ? zoneIdsInput
+      : ['DMA-01', 'DMA-02', 'DMA-03', 'DMA-04', 'DMA-05']
   const timer = window.setInterval(() => {
     const zoneId = zoneIds[Math.floor(Math.random() * zoneIds.length)]
     const base = 5.2 + (Math.random() - 0.5) * 1.4
@@ -48,7 +55,7 @@ export function connectPressureSocket(opts: PressureSocketOptions): Closable {
 
   if (useMock) {
     opts.onStatus({ status: 'connected', lastMessageAt: Date.now() })
-    return startMockStream(opts.onEvent)
+    return startMockStream(opts.onEvent, opts.mockZoneIds)
   }
 
   if (!opts.url) {

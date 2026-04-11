@@ -71,6 +71,30 @@ class EventBus extends EventEmitter {
   onCommandAckReceived(handler: (payload: CommandAckPayload) => void): void {
     this.on(EVENTS.COMMAND_ACK_RECEIVED, handler);
   }
+
+  emitRiskCorrelated(payload: RiskCorrelatedPayload): void {
+    this.emit(EVENTS.RISK_CORRELATED, payload);
+  }
+
+  onRiskCorrelated(handler: (payload: RiskCorrelatedPayload) => void): void {
+    this.on(EVENTS.RISK_CORRELATED, handler);
+  }
+
+  emitZoneRiskUpdated(payload: ZoneRiskUpdatedPayload): void {
+    this.emit(EVENTS.ZONE_RISK_UPDATED, payload);
+  }
+
+  onZoneRiskUpdated(handler: (payload: ZoneRiskUpdatedPayload) => void): void {
+    this.on(EVENTS.ZONE_RISK_UPDATED, handler);
+  }
+
+  emitMpcAdvisoryGenerated(payload: MpcAdvisoryGeneratedPayload): void {
+    this.emit(EVENTS.MPC_ADVISORY_GENERATED, payload);
+  }
+
+  onMpcAdvisoryGenerated(handler: (payload: MpcAdvisoryGeneratedPayload) => void): void {
+    this.on(EVENTS.MPC_ADVISORY_GENERATED, handler);
+  }
 }
 
 export interface TelemetryPayload {
@@ -135,6 +159,31 @@ export interface CommandTimeoutPayload {
   commandId: string;
   commandAgeMs: number;
   thresholdMs: number;
+}
+
+export interface RiskCorrelatedPayload {
+  dmaId: string;
+  correlationId: string;
+  integrationRiskState: 'NORMAL' | 'ELEVATED' | 'HIGH' | 'CRITICAL';
+  contributors: string[];
+  timestamp: Date;
+}
+
+export interface ZoneRiskUpdatedPayload {
+  dmaId: string;
+  correlationId: string;
+  integrationRiskState: 'NORMAL' | 'ELEVATED' | 'HIGH' | 'CRITICAL';
+  riskScore: number;
+  timestamp: Date;
+}
+
+export interface MpcAdvisoryGeneratedPayload {
+  dmaId: string;
+  correlationId: string;
+  operatorAttentionRequired: boolean;
+  recommendedBoundTightening: number;
+  reason: string;
+  timestamp: Date;
 }
 
 export const eventBus = EventBus.getInstance();

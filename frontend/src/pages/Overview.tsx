@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Chart, registerables } from 'chart.js'
-import { getZones, getKPI, getPressureHistory, usePolling, type Zone, type KPI, type PressureHistory } from '../services/api'
+import { getZones, getKPI, getPressureHistory, usePolling, getMpcStatus, type Zone, type KPI, type PressureHistory, type MpcStatus } from '../services/api'
 
 Chart.register(...registerables)
 
@@ -26,7 +26,8 @@ export default function Overview() {
   const [selectedDma, setSelectedDma] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [chartLoading, setChartLoading] = useState(false)
+const [chartLoading, setChartLoading] = useState(false)
+  const [mpcStatus, setMpcStatus] = useState<MpcStatus | null>(null)
 
   const fetchZones = useCallback(async () => {
     try {
@@ -61,12 +62,21 @@ export default function Overview() {
     }
   }, [])
 
+  const fetchMpc = useCallback(async () => {
+    try {
+      const data = await getMpcStatus()
+      setMpcStatus(data)
+    } catch (err) {
+      console.error('Failed to fetch MPC', err)
+    }
+  }, [])
+
   const refreshData = useCallback(async () => {
-    await Promise.all([fetchZones(), fetchKpi()])
+    await Promise.all([fetchZones(), fetchKpi(), fetchMpc()])
     if (selectedDma) {
       await fetchPressureHistory(selectedDma)
     }
-  }, [fetchZones, fetchKpi, fetchPressureHistory, selectedDma])
+  }, [fetchZones, fetchKpi, fetchMpc, fetchPressureHistory, selectedDma])
 
   usePolling(refreshData, 30000, !loading)
 
@@ -192,6 +202,17 @@ export default function Overview() {
                 Live Feed
               </span>
             </div>
+            {mpcStatus && (
+              <div className="flex items-center gap-2 px-3 py-1 border border-rule rounded-full bg-paper">
+                <span className={`w-2 h-2 rounded-full ${mpcStatus.isRunning ? 'bg-pass' : 'bg-[#E8001D]'}`} />
+                <span className="font-condensed text-[10px] uppercase tracking-wider text-ink">
+                  MPC {mpcStatus.isRunning ? 'Active' : 'Offline'}
+                </span>
+                {mpcStatus.status && (
+                   <span className="font-condensed text-[10px] text-dim border-l pl-2 border-rule">Status: {mpcStatus.status}</span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -203,7 +224,7 @@ export default function Overview() {
             Zones Online
           </div>
           <div className="font-mono text-[42px] leading-none" style={{ color: '#007A3D' }}>
-            {loading ? '-' : kpi ? `2/6` : '-'}
+            {loading ? '-' : kpi ? `${kpi.zones_online}/${kpi.zones_total}` : '-'}
           </div>
         </div>
         <div className="px-4 py-3 border-r border-rule">
@@ -211,7 +232,7 @@ export default function Overview() {
             Avg Pressure
           </div>
           <div className="font-mono text-[42px] leading-none text-ink">
-            {loading ? '-' : kpi ? `4.6 BAR` : '-'}
+            {loading ? '-' : kpi ? `${kpi.avg_pressure.toFixed(1)} BAR` : '-'}
           </div>
         </div>
         <div className="px-4 py-3 border-r border-rule">
@@ -270,9 +291,6 @@ export default function Overview() {
                     Status
                   </th>
                   <th className="text-left py-2 font-condensed text-[10px] uppercase tracking-wider text-dim">
-                    AI Conf.
-                  </th>
-                  <th className="text-left py-2 font-condensed text-[10px] uppercase tracking-wider text-dim">
                     Trend
                   </th>
                 </tr>
@@ -316,9 +334,6 @@ export default function Overview() {
                         >
                           {zone.status}
                         </span>
-                      </td>
-                      <td className="py-3 font-mono text-[14px]">
-                        {zone.ai_confidence}%
                       </td>
                       <td className="py-3">
                         <span className="text-[16px]">{trendIcons[zone.trend] || '→'}</span>

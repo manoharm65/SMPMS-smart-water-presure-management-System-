@@ -108,6 +108,14 @@ export class AlertService {
   acknowledge(id: string, acknowledgedBy?: string) {
     return alertRepository.acknowledge(id, acknowledgedBy);
   }
+
+  async triggerManual(payload: { nodeId: string; message: string; riskLevel: string }): Promise<void> {
+    await this.handleAlertTriggered({
+      nodeId: payload.nodeId,
+      message: payload.message,
+      riskLevel: payload.riskLevel,
+    });
+  }
 }
 
 export const alertService = new AlertService();

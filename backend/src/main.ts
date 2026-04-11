@@ -21,7 +21,12 @@ import commandRouter from './modules/command/command.controller.js';
 import healthRouter from './modules/health/health.controller.js';
 import dashboardRouter from './modules/dashboard/dashboard.controller.js';
 import espRouter from './modules/esp/esp.controller.js';
+import mpcRouter from './modules/mpc/mpc.routes.js';
+import { mpcService } from './modules/mpc/mpc.service.js';
+import iwedsRouter from './modules/iweds/iweds.controller.js';
 import { mlRuntimeService } from './modules/dashboard/ml-runtime.service.js';
+import integrationRouter from './modules/integration/integration.controller.js';
+import { integrationOrchestrator } from './modules/integration/integration.orchestrator.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -41,6 +46,8 @@ async function bootstrap() {
   alertService;    // Initialize alert service
   commandService;  // Initialize command service
   mlRuntimeService.startScheduler();
+  mpcService.start();
+  integrationOrchestrator.start();
   console.log('✅ Services initialized\n');
 
   // Create Express app
@@ -65,6 +72,9 @@ async function bootstrap() {
   app.use('/api/v1/commands', commandRouter);
   app.use('/api/v1/dashboard', dashboardRouter);
   app.use('/api/v1/esp', espRouter);
+  app.use('/api/v1/mpc', mpcRouter);
+  app.use('/api/v1/iweds', iwedsRouter);
+  app.use('/api/v1/integration', integrationRouter);
 
   // Legacy /telemetry route (for ESP32 compatibility)
   app.use('/telemetry', telemetryRouter);
@@ -107,7 +117,10 @@ async function bootstrap() {
   POST /api/v1/dashboard/ml/run - Trigger ML scoring now
   POST /api/v1/dashboard/ml/simulate - Condition simulation and possible problem prediction
    POST /api/v1/dashboard/zones/:zoneId/valve - Valve override
-   POST /api/v1/dashboard/zones/:zoneId/valve/revert - Revert to auto
+    POST /api/v1/dashboard/zones/:zoneId/valve/revert - Revert to auto
+    GET  /api/v1/integration/zones/:zoneId/risk - Integration zone risk
+    GET  /api/v1/integration/zones/:zoneId/timeline - Integration timeline
+    GET  /api/v1/integration/summary - Integration summary
 `);
   });
 

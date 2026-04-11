@@ -15,6 +15,7 @@ import commandRouter from '../modules/command/command.controller.js';
 import healthRouter from '../modules/health/health.controller.js';
 import dashboardRouter from '../modules/dashboard/dashboard.controller.js';
 import espRouter from '../modules/esp/esp.controller.js';
+import iwedsRouter from '../modules/iweds/iweds.controller.js';
 
 const app = express();
 app.use(cors());
@@ -29,6 +30,7 @@ app.use('/api/v1/alerts', alertRouter);
 app.use('/api/v1/commands', commandRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/esp', espRouter);
+app.use('/api/v1/iweds', iwedsRouter);
 app.use('/telemetry', telemetryRouter);
 
 // Error handlers

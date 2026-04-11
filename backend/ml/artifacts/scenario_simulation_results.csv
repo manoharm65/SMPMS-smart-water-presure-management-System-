@@ -1,2 +1,2 @@
 scenario,pressure,flow_rate,supply_on,control_action,unexplained_pressure_drop,anomaly_flag,anomaly_score,anomaly_threshold,predicted_possible_problem,possible_problem_if_condition_persists,ml_model_message,top3_probable_problems
-construction_damage_signature,2.5,39.0,1,0,0,1,0.5782555899179241,0.5316117244259586,valve_fault,valve_fault,Anomaly=YES | Likely problem now: valve_fault | If condition persists: valve_fault,valve_fault:0.31 | normal:0.29 | sensor_fault:0.27
+normal,4.3,30.0,1,0,0,0,0.45439099977830016,0.5316117244259586,normal,normal,Anomaly=NO | Likely problem now: normal | If condition persists: normal,normal:1.00 | leak:0.00 | burst:0.00
