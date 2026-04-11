@@ -48,6 +48,23 @@ def main() -> None:
     feature_columns = bundle["feature_columns"]
     x = as_feature_matrix(enriched_df, feature_columns)
 
+    # Gracefully handle empty runtime input (e.g., cold start before telemetry arrives).
+    if x.shape[0] == 0:
+        output_df = build_alert_records(
+            raw_df=raw_df,
+            enriched_df=enriched_df,
+            anomaly_flags=np.array([], dtype=int),
+            anomaly_scores=np.array([], dtype=float),
+            predicted_labels=[],
+        )
+        output_df.to_csv(args.out, index=False)
+        print(f"Predictions written to: {args.out}")
+        print("Detected anomalies: 0 / 0")
+        metadata = model_metadata_row(bundle)
+        print("Model metadata:")
+        print(pd.DataFrame([metadata]).to_string(index=False))
+        return
+
     scaler = bundle["scaler"]
     x_scaled = scaler.transform(x)
 

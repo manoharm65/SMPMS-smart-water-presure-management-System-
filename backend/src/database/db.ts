@@ -11,6 +11,47 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 let db: SqlJsDatabase | null = null;
 let dbPath: string = '';
 
+function splitSchemaStatements(schema: string): string[] {
+  const lines = schema.split(/\r?\n/);
+  const statements: string[] = [];
+  let buffer = '';
+  let inTrigger = false;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('--')) {
+      continue;
+    }
+
+    const upperLine = line.toUpperCase();
+    if (!inTrigger && upperLine.startsWith('CREATE TRIGGER')) {
+      inTrigger = true;
+    }
+
+    buffer += `${rawLine}\n`;
+
+    if (inTrigger) {
+      if (upperLine === 'END;') {
+        statements.push(buffer.trim());
+        buffer = '';
+        inTrigger = false;
+      }
+      continue;
+    }
+
+    if (line.endsWith(';')) {
+      statements.push(buffer.trim());
+      buffer = '';
+    }
+  }
+
+  if (buffer.trim()) {
+    statements.push(buffer.trim());
+  }
+
+  return statements;
+}
+
 export async function initDatabase(): Promise<SqlJsDatabase> {
   if (db) return db;
 
@@ -50,18 +91,8 @@ export async function initDatabase(): Promise<SqlJsDatabase> {
   if (existsSync(schemaPath)) {
     const schema = readFileSync(schemaPath, 'utf-8');
 
-    // Strip SQL single-line comments before splitting so statements are not
-    // accidentally skipped when a comment appears immediately above them.
-    const schemaWithoutComments = schema
-      .split(/\r?\n/)
-      .filter(line => !line.trim().startsWith('--'))
-      .join('\n');
-
-    // Split schema into individual statements and run them one by one
-    const statements = schemaWithoutComments
-      .split(/;[\r\n]*/)
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
+    // Split schema into individual statements and keep trigger bodies intact.
+    const statements = splitSchemaStatements(schema);
 
     for (const stmt of statements) {
       if (!stmt) continue;
@@ -141,7 +172,12 @@ async function seedDefaultData(database: SqlJsDatabase): Promise<void> {
 
   // Create default DMA nodes if not exist
   const defaultNodes = [
-    { nodeId: 'valve_1', name: 'District Meter Area 1', location: 'Zone A' },
+    { nodeId: 'valve_1', name: 'DMA Zone 1 - North', location: 'Zone A' },
+    { nodeId: 'valve_2', name: 'DMA Zone 2 - South', location: 'Zone B' },
+    { nodeId: 'valve_3', name: 'DMA Zone 3 - East', location: 'Zone C' },
+    { nodeId: 'valve_4', name: 'DMA Zone 4 - West', location: 'Zone D' },
+    { nodeId: 'valve_5', name: 'DMA Zone 5 - Central', location: 'Zone E' },
+    { nodeId: 'valve_6', name: 'DMA Zone 6 - Industrial', location: 'Zone F' },
   ];
 
   for (const node of defaultNodes) {

@@ -75,7 +75,7 @@ export const mpcConfigDefaults: MPCConfig = {
   learning_rate:      0.8,
   history_size:       50,
   dispatch_timeout_ms: 5000,
-  coupling_enabled:   parseBoolean(process.env.MPC_COUPLING_ENABLED, false),
+  coupling_enabled:   parseBoolean(process.env.MPC_COUPLING_ENABLED, true),
 };
 
 export const defaultHydraulicModel: HydraulicModel = parseHydraulicModel();

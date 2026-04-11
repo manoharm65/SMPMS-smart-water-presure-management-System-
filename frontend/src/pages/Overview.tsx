@@ -224,7 +224,7 @@ const [chartLoading, setChartLoading] = useState(false)
             Zones Online
           </div>
           <div className="font-mono text-[42px] leading-none" style={{ color: '#007A3D' }}>
-            {loading ? '-' : kpi ? `2/6` : '-'}
+            {loading ? '-' : kpi ? `${kpi.zones_online}/${kpi.zones_total}` : '-'}
           </div>
         </div>
         <div className="px-4 py-3 border-r border-rule">
@@ -232,7 +232,7 @@ const [chartLoading, setChartLoading] = useState(false)
             Avg Pressure
           </div>
           <div className="font-mono text-[42px] leading-none text-ink">
-            {loading ? '-' : kpi ? `4.6 BAR` : '-'}
+            {loading ? '-' : kpi ? `${kpi.avg_pressure.toFixed(1)} BAR` : '-'}
           </div>
         </div>
         <div className="px-4 py-3 border-r border-rule">
@@ -291,9 +291,6 @@ const [chartLoading, setChartLoading] = useState(false)
                     Status
                   </th>
                   <th className="text-left py-2 font-condensed text-[10px] uppercase tracking-wider text-dim">
-                    AI Conf.
-                  </th>
-                  <th className="text-left py-2 font-condensed text-[10px] uppercase tracking-wider text-dim">
                     Trend
                   </th>
                 </tr>
@@ -337,9 +334,6 @@ const [chartLoading, setChartLoading] = useState(false)
                         >
                           {zone.status}
                         </span>
-                      </td>
-                      <td className="py-3 font-mono text-[14px]">
-                        {zone.ai_confidence}%
                       </td>
                       <td className="py-3">
                         <span className="text-[16px]">{trendIcons[zone.trend] || '→'}</span>

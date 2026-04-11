@@ -146,7 +146,7 @@ export function start() {
   timer = setInterval(() => {
     runCycle().catch(console.error);
   }, config.interval_ms);
-  console.log('[MPC] Started — interval ' + config.interval_ms + 'ms, coupling: ' + config.coupling_enabled);
+  console.log('[MPC] Started — interval ' + config.interval_ms + 'ms, coupling: ' + (config.coupling_enabled ? 'enabled' : 'disabled'));
 }
 
 export function stop() {
