@@ -1,2 +1,2 @@
-scenario,pressure,flow_rate,supply_on,control_action,unexplained_pressure_drop,prev_valve_position,pressure_lag_2,hydraulic_grade_angle_deg,anomaly_flag,anomaly_score,anomaly_threshold,predicted_possible_problem,possible_problem_if_condition_persists,ml_model_message,top3_probable_problems
-normal,3.7,73.0,1,0,0,89.0,3.9,1.9999999999999885,1,0.5357898232145782,0.5316117244259586,normal,normal,Anomaly=YES | Likely problem now: normal | If condition persists: normal,normal:0.84 | leak:0.10 | valve_fault:0.04
+scenario,pressure,flow_rate,supply_on,control_action,unexplained_pressure_drop,anomaly_flag,anomaly_score,anomaly_threshold,predicted_possible_problem,possible_problem_if_condition_persists,ml_model_message,top3_probable_problems
+normal,4.3,30.0,1,0,0,0,0.45439099977830016,0.5316117244259586,normal,normal,Anomaly=NO | Likely problem now: normal | If condition persists: normal,normal:1.00 | leak:0.00 | burst:0.00

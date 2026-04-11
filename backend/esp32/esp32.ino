@@ -1,4 +1,4 @@
-#define NODE_ID          "DMA_15"
+#define NODE_ID          "valve_1"
 #define FIRMWARE_VERSION "1.0.0"
 
 const char* WIFI_SSID     = "Datta";

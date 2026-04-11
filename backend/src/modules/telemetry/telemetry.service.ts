@@ -3,6 +3,7 @@ import { telemetryRepository } from '../../repositories/telemetry.repository.js'
 import { nodeRepository } from '../../repositories/node.repository.js';
 import { commandRepository } from '../../repositories/command.repository.js';
 import { CreateTelemetryDto } from './dto/create-telemetry.dto.js';
+import { mpcService } from '../mpc/mpc.service.js';
 import { Telemetry, Command } from '../../types/index.js';
 import { config } from '../../core/config.js';
 
@@ -116,6 +117,18 @@ export class TelemetryService {
       pressure: dto.pressure,
       valvePosition: dto.valvePosition,
       timestamp: dto.timestamp,
+    });
+
+    // Feed MPC Registry
+    mpcService.updateNodeState({
+      id: dto.nodeId,
+      pressure_bar: dto.pressure,
+      flow_lps: 10, // Default for ESP payloads missing flow
+      valve_pct: dto.valvePosition || node.currentPosition || 50,
+      elevation_m: dto.nodeId === 'DMA-01' ? 10 : dto.nodeId === 'DMA-02' ? 45 : 20,
+      setpoint_bar: dto.nodeId === 'DMA-01' ? 3.0 : dto.nodeId === 'DMA-02' ? 2.5 : 2.8,
+      min_pressure_bar: 1.5,
+      max_pressure_bar: 5.5,
     });
 
     // Update node last_seen and set status to online

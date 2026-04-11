@@ -7,14 +7,14 @@ import { CommandRepository } from '../../../repositories/command.repository';
 import { eventBus } from '../../../core/event-bus';
 
 // Mock dependencies
-jest.mock('../../../repositories/node.repository');
-jest.mock('../../../repositories/telemetry.repository');
-jest.mock('../../../repositories/command.repository');
-jest.mock('../../../core/event-bus');
+vi.mock('../../../repositories/node.repository');
+vi.mock('../../../repositories/telemetry.repository');
+vi.mock('../../../repositories/command.repository');
+vi.mock('../../../core/event-bus');
 
-const MockedNodeRepository = NodeRepository as jest.MockedClass<typeof NodeRepository>;
-const MockedTelemetryRepository = TelemetryRepository as jest.MockedClass<typeof TelemetryRepository>;
-const MockedCommandRepository = CommandRepository as jest.MockedClass<typeof CommandRepository>;
+const MockedNodeRepository = NodeRepository as any;
+const MockedTelemetryRepository = TelemetryRepository as any;
+const MockedCommandRepository = CommandRepository as any;
 
 describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
   let app: Express;
@@ -44,7 +44,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Setup telemetry service with mocked dependencies
     telemetryService = new TelemetryService();
@@ -78,7 +78,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
   });
 
   afterEach(() => {
-    jest.resetModules();
+    vi.resetModules();
   });
 
   describe('Authentication', () => {
@@ -396,7 +396,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
         timestamp: new Date().toISOString(),
       });
       MockedCommandRepository.prototype.findOldestPendingByNodeId.mockReturnValue(null);
-      (eventBus.emitTelemetryReceived as jest.Mock).mockReturnValue(undefined);
+      (eventBus.emitTelemetryReceived as vi.Mock).mockReturnValue(undefined);
 
       const testApp = express();
       testApp.use(express.json());

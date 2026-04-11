@@ -6,6 +6,9 @@ export const EVENTS = {
   VALVE_MODE_CHANGED: 'valve:mode-changed',
   COMMAND_TIMEOUT: 'command:timeout',
   COMMAND_ACK_RECEIVED: 'command:ack-received',
+  RISK_CORRELATED: 'integration:risk-correlated',
+  ZONE_RISK_UPDATED: 'integration:zone-risk-updated',
+  MPC_ADVISORY_GENERATED: 'integration:mpc-advisory-generated',
 } as const;
 
 export type EventType = (typeof EVENTS)[keyof typeof EVENTS];

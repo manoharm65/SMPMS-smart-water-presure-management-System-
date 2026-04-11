@@ -6,7 +6,7 @@ const cards = [
   { to: '/map', title: 'Map', subtitle: 'Pipeline network and assets', tone: 'info' as CardTone },
   { to: '/overview', title: 'Overview', subtitle: 'KPIs and zone summary', tone: 'pass' as CardTone },
   { to: '/alerts', title: 'Alerts', subtitle: 'Operator actions and events', tone: 'warn' as CardTone },
-  { to: '/analytics', title: 'Analytics', subtitle: 'Trends and insights', tone: 'signal' as CardTone },
+  // { to: '/analytics', title: 'Analytics', subtitle: 'Trends and insights', tone: 'signal' as CardTone },
 ]
 
 const toneColors: Record<CardTone, { border: string; bar: string; text: string }> = {

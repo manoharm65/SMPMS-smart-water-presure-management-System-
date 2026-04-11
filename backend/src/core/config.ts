@@ -25,6 +25,15 @@ export interface AppConfig {
   commandTimeoutCycles: number;
   commandTimeoutCheckMs: number;
   mlPredictionsCsvPath: string;
+  integrationOrchestrationEnabled: boolean;
+  integrationAdvisoryEnabled: boolean;
+  integrationCorrelationWindowSec: number;
+}
+
+function parseBoolean(value: string | undefined, fallback: boolean): boolean {
+  if (!value) return fallback;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
 }
 
 export function getConfig(): AppConfig {
@@ -47,6 +56,9 @@ export function getConfig(): AppConfig {
   const commandTimeoutCycles = parseInt(process.env.COMMAND_TIMEOUT_CYCLES || '3', 10);
   const commandTimeoutCheckMs = parseInt(process.env.COMMAND_TIMEOUT_CHECK_MS || '30000', 10);
   const mlPredictionsCsvPath = process.env.ML_PREDICTIONS_CSV || './ml/artifacts/predictions.csv';
+  const integrationOrchestrationEnabled = parseBoolean(process.env.INTEGRATION_ORCHESTRATION_ENABLED, true);
+  const integrationAdvisoryEnabled = parseBoolean(process.env.INTEGRATION_ADVISORY_ENABLED, true);
+  const integrationCorrelationWindowSec = parseInt(process.env.INTEGRATION_CORRELATION_WINDOW_SEC || '900', 10);
 
   return {
     port,
@@ -65,6 +77,9 @@ export function getConfig(): AppConfig {
     commandTimeoutCycles,
     commandTimeoutCheckMs,
     mlPredictionsCsvPath,
+    integrationOrchestrationEnabled,
+    integrationAdvisoryEnabled,
+    integrationCorrelationWindowSec,
   };
 }
 
