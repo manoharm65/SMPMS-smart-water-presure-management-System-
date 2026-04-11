@@ -12,6 +12,8 @@ const Analytics = lazy(() => import('./pages/Analytics'))
 const MlSimulation = lazy(() => import('./pages/MlSimulation'))
 const About = lazy(() => import('./pages/About'))
 const Login = lazy(() => import('./pages/Login'))
+const ModelHub = lazy(() => import('./pages/ModelHub'))
+const ControlCenter = lazy(() => import('./pages/ControlCenter'))
 
 function App() {
   return (
@@ -31,6 +33,8 @@ function App() {
                 <Route path="/alerts" element={<Alerts />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/ml-simulation" element={<MlSimulation />} />
+                <Route path="/model-hub" element={<ModelHub />} />
+                <Route path="/control" element={<ControlCenter />} />
                 <Route path="/about" element={<About />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

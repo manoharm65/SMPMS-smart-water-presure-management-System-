@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Chart, registerables } from 'chart.js'
 import { getZones, getKPI, getPressureHistory, usePolling, getMpcStatus, type Zone, type KPI, type PressureHistory, type MpcStatus } from '../services/api'
 
@@ -18,6 +19,7 @@ const trendIcons: Record<string, string> = {
 }
 
 export default function Overview() {
+  const navigate = useNavigate()
   const chartRef = useRef<HTMLCanvasElement>(null)
   const chartInstanceRef = useRef<Chart | null>(null)
   const [zones, setZones] = useState<Zone[]>([])
@@ -26,8 +28,12 @@ export default function Overview() {
   const [selectedDma, setSelectedDma] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-const [chartLoading, setChartLoading] = useState(false)
+  const [chartLoading, setChartLoading] = useState(false)
   const [mpcStatus, setMpcStatus] = useState<MpcStatus | null>(null)
+
+  const handleRowClick = (nodeId: string) => {
+    navigate(`/control?node=${nodeId}`)
+  }
 
   const fetchZones = useCallback(async () => {
     try {
@@ -312,7 +318,8 @@ const [chartLoading, setChartLoading] = useState(false)
                   zones.map((zone) => (
                     <tr
                       key={zone.id}
-                      className="border-b border-rule/50 hover:bg-ink hover:text-paper transition-colors duration-150"
+                      className="border-b border-rule/50 hover:bg-ink hover:text-paper transition-colors duration-150 cursor-pointer"
+                      onClick={() => handleRowClick(zone.id)}
                     >
                       <td className="py-3">
                         <div className="font-mono text-[13px] font-bold">{zone.id}</div>

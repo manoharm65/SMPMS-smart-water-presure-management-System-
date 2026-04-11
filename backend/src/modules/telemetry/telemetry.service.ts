@@ -101,7 +101,7 @@ export class TelemetryService {
     return { telemetry, command: commandToDispatch };
   }
 
-  async createForEsp(dto: { nodeId: string; pressure: number; valvePosition: number; timestamp: string }): Promise<{
+  async createForEsp(dto: { nodeId: string; pressure: number; valvePosition: number; timestamp: string; flowSensor?: number }): Promise<{
     received: boolean;
     command: null | { command_id: string; type: 'SET_VALVE'; value: number };
   }> {
@@ -111,19 +111,20 @@ export class TelemetryService {
       throw new Error(`Node ${dto.nodeId} not found`);
     }
 
-    // Store telemetry
+    // Store telemetry (only store flowSensor if provided)
     telemetryRepository.create({
       nodeId: dto.nodeId,
       pressure: dto.pressure,
       valvePosition: dto.valvePosition,
       timestamp: dto.timestamp,
+      flowRate: dto.flowSensor,
     });
 
     // Feed MPC Registry
     mpcService.updateNodeState({
       id: dto.nodeId,
       pressure_bar: dto.pressure,
-      flow_lps: 10, // Default for ESP payloads missing flow
+      flow_lps: dto.flowSensor ? dto.flowSensor / 60 : 10, // Convert L/min to L/s if provided
       valve_pct: dto.valvePosition || node.currentPosition || 50,
       elevation_m: dto.nodeId === 'DMA-01' ? 10 : dto.nodeId === 'DMA-02' ? 45 : 20,
       setpoint_bar: dto.nodeId === 'DMA-01' ? 3.0 : dto.nodeId === 'DMA-02' ? 2.5 : 2.8,
@@ -139,6 +140,7 @@ export class TelemetryService {
     const payload: TelemetryPayload = {
       nodeId: dto.nodeId,
       pressure: dto.pressure,
+      flowRate: dto.flowSensor,
       timestamp: new Date(dto.timestamp),
     };
     eventBus.emitTelemetryReceived(payload);
