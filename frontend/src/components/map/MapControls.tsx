@@ -13,13 +13,9 @@ type DmaControlOption = {
 export default function MapControls({
   mapMode,
   onMapModeChange,
-  isHardwareMarking,
-  hardwarePointCount,
   dmaOptions,
   selectedHardwareDmaId,
   onSelectedHardwareDmaChange,
-  onToggleHardwareMarking,
-  onClearHardwarePoints,
   selectedDmaElevation,
   selectedDmaZone,
   selectedDmaZoneEmoji,
@@ -28,13 +24,9 @@ export default function MapControls({
 }: {
   mapMode: MapMode
   onMapModeChange: (mode: MapMode) => void
-  isHardwareMarking: boolean
-  hardwarePointCount: number
   dmaOptions: DmaControlOption[]
   selectedHardwareDmaId: string
   onSelectedHardwareDmaChange: (dmaId: string) => void
-  onToggleHardwareMarking: () => void
-  onClearHardwarePoints: () => void
   selectedDmaElevation: number
   selectedDmaZone: DmaZoneLevel
   selectedDmaZoneEmoji: string
@@ -44,21 +36,34 @@ export default function MapControls({
   const map = useMap()
 
   return (
-    <div className="pointer-events-auto absolute right-2 top-2 z-[500] w-72 rounded border border-border bg-panel p-2 text-xs">
+    <div
+      className="pointer-events-auto absolute right-2 top-2 z-[500] text-xs"
+      style={{
+        width: 260,
+        padding: 16,
+        fontFamily: 'Segoe UI, sans-serif',
+        backgroundColor: '#1a2035',
+        color: '#ffffff',
+        borderLeft: '1px solid #2e3a55',
+        boxShadow: '-2px 0 12px rgba(0,0,0,0.4)',
+      }}
+    >
       <div className="mb-2 flex items-center justify-between">
-        <div className="text-[11px] uppercase tracking-wider text-text-faint">
+        <div style={{ color: '#63b3ed', fontWeight: 700, fontSize: 13, letterSpacing: '0.5px' }}>
           Map View
         </div>
         <div className="flex gap-1">
           <button
-            className="rounded border border-border bg-bg px-2 py-1 text-text-muted hover:text-text"
+            className="px-2 py-1"
+            style={{ backgroundColor: '#2e3a55', color: '#ffffff', border: '1px solid #4a5a7b', borderRadius: 4 }}
             onClick={() => map.zoomIn()}
             type="button"
           >
             +
           </button>
           <button
-            className="rounded border border-border bg-bg px-2 py-1 text-text-muted hover:text-text"
+            className="px-2 py-1"
+            style={{ backgroundColor: '#2e3a55', color: '#ffffff', border: '1px solid #4a5a7b', borderRadius: 4 }}
             onClick={() => map.zoomOut()}
             type="button"
           >
@@ -67,10 +72,10 @@ export default function MapControls({
         </div>
       </div>
 
-      <div className="mt-2 border-t border-border pt-2">
-        <div className="text-[11px] uppercase tracking-wider text-text-faint">Layers</div>
+      <div className="mt-2 border-t pt-2" style={{ borderColor: '#2e3a55' }}>
+        <div style={{ color: '#63b3ed', fontWeight: 700, fontSize: 13, letterSpacing: '0.5px' }}>Layers</div>
         <label className="mt-1 flex cursor-pointer items-center justify-between gap-2 rounded px-1 py-1 hover:bg-bg">
-          <span className="text-text-muted">Base Map</span>
+          <span style={{ color: '#cbd5e0' }}>Base Map</span>
           <input
             type="radio"
             checked={mapMode === 'map'}
@@ -78,7 +83,7 @@ export default function MapControls({
           />
         </label>
         <label className="flex cursor-pointer items-center justify-between gap-2 rounded px-1 py-1 hover:bg-bg">
-          <span className="text-text-muted">Map + DMA Labels</span>
+          <span style={{ color: '#cbd5e0' }}>Map + DMA Labels</span>
           <input
             type="radio"
             checked={mapMode === 'dma'}
@@ -87,16 +92,24 @@ export default function MapControls({
         </label>
       </div>
 
-      <div className="mt-2 border-t border-border pt-2 text-[11px] text-text-faint">
+      <div className="mt-2 border-t pt-2 text-[11px]" style={{ borderColor: '#2e3a55', color: '#a0aec0' }}>
         Auto DMA zones are generated from network density.
       </div>
 
       {mapMode === 'dma' ? (
-        <div className="mt-2 border-t border-border pt-2">
-          <div className="text-[11px] uppercase tracking-wider text-text-faint">Hardware Link (Select DMA)</div>
-          <label className="mt-1 block text-[11px] text-text-muted">DMA</label>
+        <div className="mt-2 border-t pt-2" style={{ borderColor: '#2e3a55' }}>
+          <div style={{ color: '#63b3ed', fontWeight: 700, fontSize: 13, letterSpacing: '0.5px' }}>HARDWARE LINK (SELECT DMA)</div>
+          <label className="mt-1 block" style={{ color: '#a0aec0', fontSize: 12 }}>DMA</label>
           <select
-            className="mt-1 w-full rounded border border-border bg-bg px-2 py-1 text-[11px] text-text"
+            className="mt-1"
+            style={{
+              backgroundColor: '#2e3a55',
+              color: '#ffffff',
+              border: '1px solid #4a5a7b',
+              borderRadius: 6,
+              padding: '6px 10px',
+              width: '100%',
+            }}
             value={selectedHardwareDmaId}
             onChange={(e) => onSelectedHardwareDmaChange(e.target.value)}
           >
@@ -105,30 +118,20 @@ export default function MapControls({
             ))}
           </select>
 
-          <div className="mt-2 rounded border border-border bg-bg px-2 py-2 text-[11px]">
-            <div className="flex justify-between"><span className="text-text-faint">Selected:</span><span className="font-mono text-text">{selectedHardwareDmaId}</span></div>
-            <div className="mt-1 flex justify-between"><span className="text-text-faint">Elevation:</span><span className="text-text">{selectedDmaElevation}m</span></div>
-            <div className="mt-1 flex justify-between"><span className="text-text-faint">Zone:</span><span className="text-text">{selectedDmaZone} {selectedDmaZoneEmoji}</span></div>
-            <div className="mt-1 flex justify-between"><span className="text-text-faint">Flow:</span><span className="text-text">{selectedDmaFlowDirection}</span></div>
-            <div className="mt-1 flex justify-between gap-2"><span className="text-text-faint">Feeds into:</span><span className="text-right text-text">{selectedDmaFeedsInto}</span></div>
-          </div>
-
-          <button
-            type="button"
-            className="mt-1 w-full rounded border border-border bg-bg px-2 py-1 text-left text-[11px] text-text-muted hover:text-text"
-            onClick={onToggleHardwareMarking}
+          <div
+            className="mt-2"
+            style={{
+              backgroundColor: '#242f4b',
+              borderRadius: 8,
+              padding: 10,
+              border: '1px solid #3a4a6b',
+            }}
           >
-            {isHardwareMarking ? 'Stop marking points' : 'Mark 2 ESP points'}
-          </button>
-          <button
-            type="button"
-            className="mt-1 w-full rounded border border-border bg-bg px-2 py-1 text-left text-[11px] text-text-muted hover:text-text"
-            onClick={onClearHardwarePoints}
-          >
-            Clear points
-          </button>
-          <div className="mt-1 text-[11px] text-text-faint">
-            Points: {hardwarePointCount}/2 (inside {selectedHardwareDmaId})
+            <div className="flex justify-between"><span style={{ color: '#a0aec0', fontSize: 12 }}>Selected:</span><span style={{ color: '#ffffff', fontWeight: 600, fontSize: 13 }}>{selectedHardwareDmaId}</span></div>
+            <div className="mt-1 flex justify-between"><span style={{ color: '#a0aec0', fontSize: 12 }}>Elevation:</span><span style={{ color: '#ffffff', fontWeight: 600, fontSize: 13 }}>{selectedDmaElevation}m</span></div>
+            <div className="mt-1 flex justify-between"><span style={{ color: '#a0aec0', fontSize: 12 }}>Zone:</span><span style={{ color: '#ffffff', fontWeight: 600, fontSize: 13 }}>{selectedDmaZone} {selectedDmaZoneEmoji}</span></div>
+            <div className="mt-1 flex justify-between"><span style={{ color: '#a0aec0', fontSize: 12 }}>Flow:</span><span style={{ color: '#ffffff', fontWeight: 600, fontSize: 13 }}>{selectedDmaFlowDirection}</span></div>
+            <div className="mt-1 flex justify-between gap-2"><span style={{ color: '#a0aec0', fontSize: 12 }}>Feeds into:</span><span className="text-right" style={{ color: '#ffffff', fontWeight: 600, fontSize: 13 }}>{selectedDmaFeedsInto}</span></div>
           </div>
         </div>
       ) : null}

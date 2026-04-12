@@ -17,6 +17,85 @@ function getBot(): TelegramBot | null {
 }
 
 export class TelegramService {
+  private sendChain: Promise<void> = Promise.resolve();
+
+  private nextSendAt = 0;
+
+  private readonly minSendIntervalMs = 1200;
+
+  private async sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private extractRetryAfterSeconds(err: unknown): number | null {
+    const candidate = err as {
+      response?: {
+        body?: { parameters?: { retry_after?: number } };
+        headers?: Record<string, string | string[]>;
+      };
+    };
+
+    const bodyRetry = candidate?.response?.body?.parameters?.retry_after;
+    if (typeof bodyRetry === 'number' && Number.isFinite(bodyRetry) && bodyRetry > 0) {
+      return bodyRetry;
+    }
+
+    const headerValue = candidate?.response?.headers?.['retry-after'];
+    if (typeof headerValue === 'string') {
+      const parsed = Number(headerValue);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    if (Array.isArray(headerValue) && headerValue.length > 0) {
+      const parsed = Number(headerValue[0]);
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+
+    return null;
+  }
+
+  private async executeWithThrottle<T>(task: () => Promise<T>): Promise<T> {
+    const waitMs = Math.max(0, this.nextSendAt - Date.now());
+    if (waitMs > 0) {
+      await this.sleep(waitMs);
+    }
+
+    this.nextSendAt = Date.now() + this.minSendIntervalMs;
+    return task();
+  }
+
+  private enqueueTelegramTask<T>(task: () => Promise<T>): Promise<T> {
+    const run = async () => {
+      let attempt = 0;
+
+      while (attempt < 3) {
+        attempt += 1;
+        try {
+          return await this.executeWithThrottle(task);
+        } catch (err) {
+          const retryAfterSec = this.extractRetryAfterSeconds(err);
+          const message = err instanceof Error ? err.message : String(err);
+
+          if (retryAfterSec && attempt < 3) {
+            const delayMs = (retryAfterSec + 1) * 1000;
+            console.warn(`[Telegram] Rate limited (429). Retrying in ${retryAfterSec}s (attempt ${attempt}/3)`);
+            this.nextSendAt = Math.max(this.nextSendAt, Date.now() + delayMs);
+            await this.sleep(delayMs);
+            continue;
+          }
+
+          console.error(`[Telegram] Send failed: ${message}`);
+          throw err;
+        }
+      }
+
+      throw new Error('Telegram send retries exhausted');
+    };
+
+    const queued = this.sendChain.then(run, run);
+    this.sendChain = queued.then(() => undefined, () => undefined);
+    return queued;
+  }
+
   async sendAlert(alert: {
     nodeId: string;
     message: string;
@@ -64,11 +143,11 @@ export class TelegramService {
     message += `\n\n<b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      await this.enqueueTelegramTask(() => telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' }));
       console.log(`[Telegram] Alert sent for node ${alert.nodeId}`);
       return true;
     } catch (err) {
-      console.error('[Telegram] Failed to send alert:', err);
+      console.error(`[Telegram] Failed to send alert for node ${alert.nodeId}`);
       return false;
     }
   }
@@ -87,10 +166,10 @@ export class TelegramService {
 <b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      await this.enqueueTelegramTask(() => telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' }));
       return true;
     } catch (err) {
-      console.error('[Telegram] Failed to send command notification:', err);
+      console.error('[Telegram] Failed to send command notification');
       return false;
     }
   }
@@ -117,11 +196,11 @@ export class TelegramService {
 <b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      await this.enqueueTelegramTask(() => telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' }));
       console.log(`[Telegram] Critical command notification sent for node ${payload.nodeId}`);
       return true;
     } catch (err) {
-      console.error('[Telegram] Failed to send critical command notification:', err);
+      console.error(`[Telegram] Failed to send critical command notification for node ${payload.nodeId}`);
       return false;
     }
   }
@@ -144,11 +223,11 @@ export class TelegramService {
 <b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      await this.enqueueTelegramTask(() => telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' }));
       console.log(`[Telegram] Timeout notification sent for node ${payload.nodeId}`);
       return true;
     } catch (err) {
-      console.error('[Telegram] Failed to send timeout notification:', err);
+      console.error(`[Telegram] Failed to send timeout notification for node ${payload.nodeId}`);
       return false;
     }
   }
@@ -171,11 +250,11 @@ export class TelegramService {
 <b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      await this.enqueueTelegramTask(() => telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' }));
       console.log(`[Telegram] Override auto-cancelled notification sent for node ${payload.nodeId}`);
       return true;
     } catch (err) {
-      console.error('[Telegram] Failed to send override auto-cancelled notification:', err);
+      console.error(`[Telegram] Failed to send override auto-cancelled notification for node ${payload.nodeId}`);
       return false;
     }
   }
@@ -199,11 +278,11 @@ export class TelegramService {
 <b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      await this.enqueueTelegramTask(() => telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' }));
       console.log(`[Telegram] Manual override notification sent for node ${payload.nodeId}`);
       return true;
     } catch (err) {
-      console.error('[Telegram] Failed to send manual override notification:', err);
+      console.error(`[Telegram] Failed to send manual override notification for node ${payload.nodeId}`);
       return false;
     }
   }
@@ -239,11 +318,11 @@ If no changes are made in the next <b>${payload.remainingReadings} telemetry rea
 <b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      await this.enqueueTelegramTask(() => telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' }));
       console.log(`[Telegram] Override safety warning sent for node ${payload.nodeId}`);
       return true;
     } catch (err) {
-      console.error('[Telegram] Failed to send override safety warning:', err);
+      console.error(`[Telegram] Failed to send override safety warning for node ${payload.nodeId}`);
       return false;
     }
   }
@@ -273,11 +352,11 @@ The automatic control system will now manage the valve position based on current
 <b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      await this.enqueueTelegramTask(() => telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' }));
       console.log(`[Telegram] Override auto-revert notification sent for node ${payload.nodeId}`);
       return true;
     } catch (err) {
-      console.error('[Telegram] Failed to send override auto-revert notification:', err);
+      console.error(`[Telegram] Failed to send override auto-revert notification for node ${payload.nodeId}`);
       return false;
     }
   }
@@ -304,17 +383,17 @@ The automatic control system will now manage the valve position based on current
 <b>Time:</b> ${new Date().toISOString()}`;
 
     try {
-      await telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' });
+      await this.enqueueTelegramTask(() => telegramBot.sendMessage(config.telegramChatId, message, { parse_mode: 'HTML' }));
       const telegramBotAny = telegramBot as unknown as {
         sendDocument: (chatId: string, doc: string, opts?: { caption?: string }) => Promise<unknown>;
       };
-      await telegramBotAny.sendDocument(config.telegramChatId, payload.datasetPath, {
+      await this.enqueueTelegramTask(() => telegramBotAny.sendDocument(config.telegramChatId, payload.datasetPath, {
         caption: `ML simulation dataset snapshot at ${payload.totalPredictions} predictions`,
-      });
+      }));
       console.log(`[Telegram] ML simulation milestone sent (${payload.totalPredictions})`);
       return true;
     } catch (err) {
-      console.error('[Telegram] Failed to send ML simulation milestone:', err);
+      console.error('[Telegram] Failed to send ML simulation milestone');
       return false;
     }
   }

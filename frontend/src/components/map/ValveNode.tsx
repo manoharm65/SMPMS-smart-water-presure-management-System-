@@ -1,5 +1,5 @@
 import type { LatLngTuple } from 'leaflet'
-import { CircleMarker, Popup, Tooltip } from 'react-leaflet'
+import { CircleMarker, Polygon, Polyline, Popup, Tooltip } from 'react-leaflet'
 
 export type ValveNodeProps = {
   id: string
@@ -14,6 +14,57 @@ export type ValveNodeProps = {
   interactive?: boolean
   selected?: boolean
   highlighted?: boolean
+}
+
+const SOURCE_SHAPE_IDS = {
+  ujani: 'SMC-RAW_WATER_STATION_5-3',
+  takali: 'SMC-RAW_WATER_STATION_5-1',
+} as const
+
+function degreesPerMeterLat() {
+  return 1 / 111320
+}
+
+function degreesPerMeterLng(lat: number) {
+  const c = Math.max(0.2, Math.cos((lat * Math.PI) / 180))
+  return 1 / (111320 * c)
+}
+
+function squareAround(point: LatLngTuple, sizeMeters = 26): LatLngTuple[] {
+  const [lat, lng] = point
+  const dLat = sizeMeters * degreesPerMeterLat()
+  const dLng = sizeMeters * degreesPerMeterLng(lat)
+  return [
+    [lat + dLat, lng - dLng],
+    [lat + dLat, lng + dLng],
+    [lat - dLat, lng + dLng],
+    [lat - dLat, lng - dLng],
+    [lat + dLat, lng - dLng],
+  ]
+}
+
+function diamondAround(point: LatLngTuple, sizeMeters = 30): LatLngTuple[] {
+  const [lat, lng] = point
+  const dLat = sizeMeters * degreesPerMeterLat()
+  const dLng = sizeMeters * degreesPerMeterLng(lat)
+  return [
+    [lat + dLat, lng],
+    [lat, lng + dLng],
+    [lat - dLat, lng],
+    [lat, lng - dLng],
+    [lat + dLat, lng],
+  ]
+}
+
+function supportPointsAround(point: LatLngTuple, spreadMeters = 42): LatLngTuple[] {
+  const [lat, lng] = point
+  const dLat = spreadMeters * degreesPerMeterLat()
+  const dLng = spreadMeters * degreesPerMeterLng(lat)
+  return [
+    [lat + dLat * 0.9, lng + dLng * 0.2],
+    [lat - dLat * 0.5, lng + dLng * 1.0],
+    [lat - dLat * 0.95, lng - dLng * 0.4],
+  ]
 }
 
 function formatValue(v: unknown) {
@@ -112,26 +163,14 @@ export default function ValveNode({
     (typeof properties?.['Type of St'] === 'string' && properties['Type of St']) ||
     undefined
   const [lat, lng] = position
+  const isUjaniSource = id === SOURCE_SHAPE_IDS.ujani
+  const isTakaliSource = id === SOURCE_SHAPE_IDS.takali
+  const isSpecialSource = isUjaniSource || isTakaliSource
+  const shapePositions = isUjaniSource ? squareAround(position) : diamondAround(position)
+  const sourceSupportPoints = supportPointsAround(position)
 
-  return (
-    <CircleMarker
-      center={position}
-      radius={r}
-      interactive={interactive}
-      pathOptions={{
-        color,
-        weight: selected ? 3 : 2,
-        fillColor: '#080d14',
-        fillOpacity: 0.9,
-      }}
-      eventHandlers={
-        interactive
-          ? {
-              click: () => onSelect(id),
-            }
-          : undefined
-      }
-    >
+  const nodeContent = (
+    <>
       {showTooltip ? (
         <Tooltip direction="top" offset={[0, -6]} opacity={0.9}>
           <div className="text-xs">
@@ -191,6 +230,74 @@ export default function ValveNode({
           </div>
         </div>
       </Popup>
+    </>
+  )
+
+  if (isSpecialSource) {
+    return (
+      <>
+        {sourceSupportPoints.map((pt, idx) => (
+          <Polyline
+            key={`${id}-support-link-${idx}`}
+            positions={[position, pt]}
+            pathOptions={{ color: '#1F2937', weight: 2, opacity: 0.85, dashArray: '4 4' }}
+            interactive={false}
+          />
+        ))}
+
+        {sourceSupportPoints.map((pt, idx) => (
+          <CircleMarker
+            key={`${id}-support-pt-${idx}`}
+            center={pt}
+            radius={4}
+            interactive={false}
+            pathOptions={{ color: '#334155', fillColor: '#E2E8F0', fillOpacity: 0.95, weight: 1.5 }}
+          />
+        ))}
+
+        <Polygon
+          positions={shapePositions}
+          interactive={interactive}
+          pathOptions={{
+            color,
+            weight: selected ? 3 : 2,
+            fillColor: '#080d14',
+            fillOpacity: 0.9,
+          }}
+          eventHandlers={
+            interactive
+              ? {
+                  click: () => onSelect(id),
+                }
+              : undefined
+          }
+        >
+          {nodeContent}
+        </Polygon>
+      </>
+    )
+  }
+
+  return (
+    <CircleMarker
+      center={position}
+      radius={r}
+      interactive={interactive}
+      pathOptions={{
+        color,
+        weight: selected ? 3 : 2,
+        fillColor: '#080d14',
+        fillOpacity: 0.9,
+      }}
+      eventHandlers={
+        interactive
+          ? {
+              click: () => onSelect(id),
+            }
+          : undefined
+      }
+    >
+      {nodeContent}
     </CircleMarker>
   )
 }

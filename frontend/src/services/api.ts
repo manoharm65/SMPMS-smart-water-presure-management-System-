@@ -15,6 +15,9 @@ export interface Zone {
   lat: number
   lng: number
   pressure: number
+  flow_rate?: number
+  flowRate?: number
+  valvePosition?: number
   valve_position: number
   ai_confidence: number
   status: 'ok' | 'warn' | 'low' | 'crit'
@@ -114,6 +117,9 @@ export interface MlSimulationResult {
   flow_rate: number
   supply_on: number
   control_action: number
+  prev_valve_position: number
+  pressure_lag_2: number
+  hydraulic_grade_angle_deg: number
   unexplained_pressure_drop: number
   anomaly_flag: number
   anomaly_score: number
@@ -122,6 +128,24 @@ export interface MlSimulationResult {
   possible_problem_if_condition_persists: string
   ml_model_message: string
   top3_probable_problems: string
+}
+
+export interface MlSimulationInput {
+  pressure: number
+  flowRate: number
+  valvePosition: number
+  supplyOn: boolean
+  constructionActivity: boolean
+  pipeAgeYears: number
+  previousValvePosition: number
+  pressureLag2: number
+  hydraulicGradeAngleDeg: number
+}
+
+export interface MlSimulationMilestone {
+  totalPredictions: number
+  triggered: boolean
+  webAlertMessage?: string
 }
 
 export interface MpcStatus {
@@ -148,6 +172,7 @@ export interface MlSimulationResponse {
   scenario: MlSimulationScenario
   count: number
   results: MlSimulationResult[]
+  milestone?: MlSimulationMilestone
 }
 
 const defaultBaseUrl = (import.meta as any).env?.VITE_API_BASE_URL as
@@ -266,9 +291,10 @@ export async function getMlSimulationScenarios(
 
 export async function simulateMlCondition(
   scenario: MlSimulationScenario,
+  input?: MlSimulationInput,
   cfg?: ApiConfig
 ): Promise<MlSimulationResponse> {
-  return apiPost<MlSimulationResponse>(`${BASE_URL}/ml/simulate`, { scenario }, cfg)
+  return apiPost<MlSimulationResponse>(`${BASE_URL}/ml/simulate`, { scenario, ...(input ?? {}) }, cfg)
 }
 
 export async function setValvePosition(
@@ -290,6 +316,17 @@ export async function revertValveToAuto(
   return apiPost<ValveCommandResponse>(
     `${BASE_URL}/zones/${zoneId}/valve/revert`,
     {},
+    cfg
+  )
+}
+
+export async function triggerManualAlert(
+  payload: { nodeId: string; message: string; riskLevel: string },
+  cfg?: ApiConfig
+): Promise<{ success: boolean; message: string }> {
+  return apiPost<{ success: boolean; message: string }>(
+    '/api/v1/alerts/trigger',
+    payload,
     cfg
   )
 }

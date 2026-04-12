@@ -1,7 +1,6 @@
 import L, { type LatLngTuple } from 'leaflet'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { CircleMarker, MapContainer, Pane, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
-import { triggerManualAlert } from '../../services/api'
+import { useEffect, useMemo, useState } from 'react'
+import { CircleMarker, MapContainer, Pane, Polygon, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet'
 import { useDashboardStore } from '../../store/dashboardStore'
 import FlowPipeline from './FlowPipeline'
 import MapControls from './MapControls'
@@ -47,6 +46,9 @@ const DMA_ZONES: DmaZone[] = [
 ]
 
 const DMA_BASE_CENTER: LatLngTuple = [18.52, 73.856]
+
+const DMA08_OUTLET_POINT: LatLngTuple = [17.66677, 75.9126]
+const DMA08_INLET_POINT: LatLngTuple = [17.6577, 75.9122]
 
 const DEFAULT_CENTER: LatLngTuple = [12.9716, 77.5946]
 
@@ -266,61 +268,6 @@ function DmaLegendControl({ enabled }: { enabled: boolean }) {
   return null
 }
 
-function pointInPolygon(point: LatLngTuple, polygon: LatLngTuple[]) {
-  let inside = false
-  const x = point[1]
-  const y = point[0]
-
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i]![1]
-    const yi = polygon[i]![0]
-    const xj = polygon[j]![1]
-    const yj = polygon[j]![0]
-
-    const intersects =
-      yi > y !== yj > y &&
-      x < ((xj - xi) * (y - yi)) / ((yj - yi) || Number.EPSILON) + xi
-    if (intersects) inside = !inside
-  }
-
-  return inside
-}
-
-function HardwarePointCapture({
-  enabled,
-  onPick,
-}: {
-  enabled: boolean
-  onPick: (point: LatLngTuple) => void
-}) {
-  useMapEvents({
-    click: (e) => {
-      if (!enabled) return
-      onPick([e.latlng.lat, e.latlng.lng])
-    },
-  })
-  return null
-}
-
-function severityColor(status: 'normal' | 'low' | 'warning' | 'critical' | 'unknown') {
-  switch (status) {
-    case 'critical':
-      return '#DC2626'
-    case 'warning':
-      return '#F59E0B'
-    case 'low':
-      return '#FACC15'
-    case 'normal':
-      return '#16A34A'
-    default:
-      return '#64748B'
-  }
-}
-
-function formatLatLng(point: LatLngTuple) {
-  return `${point[0].toFixed(6)}, ${point[1].toFixed(6)}`
-}
-
 function degreesPerMeterLat() {
   return 1 / 111320
 }
@@ -335,6 +282,32 @@ function metersBetween(a: LatLngTuple, b: LatLngTuple) {
   const dLat = (a[0] - b[0]) / degreesPerMeterLat()
   const dLng = (a[1] - b[1]) / degreesPerMeterLng(midLat)
   return Math.sqrt(dLat * dLat + dLng * dLng)
+}
+
+function squareAround(point: LatLngTuple, sizeMeters = 30): LatLngTuple[] {
+  const [lat, lng] = point
+  const dLat = sizeMeters * degreesPerMeterLat()
+  const dLng = sizeMeters * degreesPerMeterLng(lat)
+  return [
+    [lat + dLat, lng - dLng],
+    [lat + dLat, lng + dLng],
+    [lat - dLat, lng + dLng],
+    [lat - dLat, lng - dLng],
+    [lat + dLat, lng - dLng],
+  ]
+}
+
+function diamondAround(point: LatLngTuple, sizeMeters = 36): LatLngTuple[] {
+  const [lat, lng] = point
+  const dLat = sizeMeters * degreesPerMeterLat()
+  const dLng = sizeMeters * degreesPerMeterLng(lat)
+  return [
+    [lat + dLat, lng],
+    [lat, lng + dLng],
+    [lat - dLat, lng],
+    [lat, lng - dLng],
+    [lat + dLat, lng],
+  ]
 }
 
 function seededUnitNoise(seed: number) {
@@ -402,12 +375,7 @@ export default function PipelineMap({
   const selectedValveId = useDashboardStore((s) => s.selectedValveId)
   const selectedPipelineId = useDashboardStore((s) => s.selectedPipelineId)
   const [hoveredPipelineId, setHoveredPipelineId] = useState<string | null>(null)
-  const [isHardwareMarking, setIsHardwareMarking] = useState(false)
-  const [hardwarePoints, setHardwarePoints] = useState<LatLngTuple[]>([])
-  const [hardwareHint, setHardwareHint] = useState<string>('')
   const [selectedHardwareDmaId, setSelectedHardwareDmaId] = useState<string>('DMA-01')
-  const lastTelegramAt = useRef<number>(0)
-  const lastTelegramStatus = useRef<string | null>(null)
 
   const pipelineRendering = useMemo(() => {
     const count = pipelines.length
@@ -446,55 +414,6 @@ export default function PipelineMap({
     () => allDmas.find((d) => d.id === selectedHardwareDmaId) ?? allDmas[0] ?? null,
     [allDmas, selectedHardwareDmaId],
   )
-  const activeDmaTelemetry = activeDma ? telemetryByZone[activeDma.id] : undefined
-
-  const hardwareLinkStatus: 'normal' | 'low' | 'warning' | 'critical' | 'unknown' =
-    activeDmaTelemetry?.status ?? 'unknown'
-
-  const onPickHardwarePoint = (point: LatLngTuple) => {
-    if (!activeDma) {
-      setHardwareHint('No DMA available yet.')
-      return
-    }
-    if (!pointInPolygon(point, activeDma.points)) {
-      setHardwareHint(`Pick points inside ${activeDma.id} only.`)
-      return
-    }
-
-    setHardwareHint('')
-    setHardwarePoints((prev) => {
-      if (prev.length >= 2) return [prev[1]!, point]
-      return [...prev, point]
-    })
-  }
-
-  useEffect(() => {
-    if (hardwarePoints.length < 2) return
-    if (!activeDma || !activeDmaTelemetry) return
-    if (!(activeDmaTelemetry.status === 'warning' || activeDmaTelemetry.status === 'critical')) return
-
-    const now = Date.now()
-    const cooldownMs = 60_000
-    if (lastTelegramStatus.current === activeDmaTelemetry.status && now - lastTelegramAt.current < cooldownMs) {
-      return
-    }
-
-    lastTelegramAt.current = now
-    lastTelegramStatus.current = activeDmaTelemetry.status
-
-    const riskLevel = activeDmaTelemetry.status === 'critical' ? 'CRITICAL' : 'WARNING'
-    void triggerManualAlert({
-      nodeId: `${activeDma.id}-LINK`,
-      riskLevel,
-      message:
-        `Hardware link alert on ${activeDma.name} (${activeDma.id}): ` +
-        `ESP-A [${formatLatLng(hardwarePoints[0]!)}], ` +
-        `ESP-B [${formatLatLng(hardwarePoints[1]!)}], ` +
-        `status=${activeDmaTelemetry.status.toUpperCase()}, ` +
-        `pressure=${activeDmaTelemetry.pressure.toFixed(2)}bar, flow=${activeDmaTelemetry.flowRate.toFixed(1)}L/s, ` +
-        `anomaly=${(activeDmaTelemetry.anomalyScore * 100).toFixed(0)}%`,
-    }).catch(() => undefined)
-  }, [activeDma, activeDmaTelemetry, hardwarePoints.length])
 
   const batchedPipelines = useMemo(() => {
     if (pipelines.length <= 10_000) return null
@@ -540,34 +459,17 @@ export default function PipelineMap({
         <MapControls
           mapMode={mapMode}
           onMapModeChange={setMapMode}
-          isHardwareMarking={isHardwareMarking}
-          hardwarePointCount={hardwarePoints.length}
           dmaOptions={allDmas.map((d) => ({ id: d.id, elevation: d.elevation, zone: d.zone, feedsInto: d.feedsInto }))}
           selectedHardwareDmaId={activeDma?.id ?? 'DMA-01'}
           onSelectedHardwareDmaChange={(dmaId) => {
             setSelectedHardwareDmaId(dmaId)
             selectDma(dmaId)
-            setHardwarePoints([])
-            setHardwareHint('')
-          }}
-          onToggleHardwareMarking={() => {
-            setHardwareHint('')
-            setIsHardwareMarking((v) => !v)
-          }}
-          onClearHardwarePoints={() => {
-            setHardwarePoints([])
-            setHardwareHint('')
           }}
           selectedDmaElevation={activeDma?.elevation ?? 0}
           selectedDmaZone={activeDma?.zone ?? 'Medium'}
           selectedDmaZoneEmoji={getZoneEmoji(activeDma?.zone ?? 'Medium')}
           selectedDmaFlowDirection={getFlowDirection(activeDma?.zone ?? 'Medium')}
           selectedDmaFeedsInto={activeDma?.feedsInto?.join(', ') ?? '--'}
-        />
-
-        <HardwarePointCapture
-          enabled={mapMode === 'dma' && isHardwareMarking}
-          onPick={onPickHardwarePoint}
         />
 
         <DmaLayerGroup
@@ -578,63 +480,36 @@ export default function PipelineMap({
           onPipelineSelect={onPipelineSelect}
         />
 
-        {mapMode === 'dma' && hardwarePoints.length > 0 ? (
-          <Pane name="hardware-link" style={{ zIndex: 320 }}>
-            {hardwarePoints.length === 2 ? (
-              <Polyline
-                positions={hardwarePoints}
-                pathOptions={{
-                  color: severityColor(hardwareLinkStatus),
-                  weight: 6,
-                  opacity: 0.95,
-                }}
-              >
-                <Tooltip>
-                  <div className="text-xs">
-                    <div className="font-mono">ESP LINK / {activeDma?.id ?? 'DMA'}</div>
-                    <div className="text-text-muted">Status: {hardwareLinkStatus.toUpperCase()}</div>
-                    <div className="text-text-muted">
-                      Pressure: {activeDmaTelemetry ? `${activeDmaTelemetry.pressure.toFixed(2)} bar` : '--'}
-                    </div>
-                    <div className="text-text-muted">
-                      Flow: {activeDmaTelemetry ? `${activeDmaTelemetry.flowRate.toFixed(1)} L/s` : '--'}
-                    </div>
-                    <div className="text-text-muted">
-                      Anomaly: {activeDmaTelemetry ? `${(activeDmaTelemetry.anomalyScore * 100).toFixed(0)}%` : '--'}
-                    </div>
-                    <div className="mt-1 text-text-faint">Telegram triggers on WARNING/CRITICAL.</div>
-                  </div>
-                </Tooltip>
-              </Polyline>
-            ) : null}
+        {mapMode === 'dma' && (activeDma?.id ?? '') === 'DMA-08' ? (
+          <Pane name="dma8-hardware-model" style={{ zIndex: 330 }}>
+            <Polyline
+              positions={[DMA08_OUTLET_POINT, DMA08_INLET_POINT]}
+              pathOptions={{ color: '#111827', weight: 7, opacity: 0.9 }}
+            >
+              <Tooltip>
+                <div className="text-xs">
+                  <div className="font-mono">DMA-08 HARDWARE LINK</div>
+                  <div className="text-text-muted">Outlet: 17.66677, 75.9126</div>
+                  <div className="text-text-muted">Inlet: 17.6577, 75.9122</div>
+                </div>
+              </Tooltip>
+            </Polyline>
 
-            {hardwarePoints.map((pt, idx) => (
-              <CircleMarker
-                key={`esp-point-${idx}`}
-                center={pt}
-                radius={7}
-                pathOptions={{
-                  color: '#0F172A',
-                  fillColor: idx === 0 ? '#22C55E' : '#06B6D4',
-                  fillOpacity: 0.95,
-                  weight: 2,
-                }}
-              >
-                <Tooltip permanent direction="top" opacity={1}>
-                  <div className="rounded border border-border bg-panel px-2 py-0.5 font-mono text-[10px] text-text">
-                    {idx === 0 ? 'ESP-A' : 'ESP-B'}
-                  </div>
-                </Tooltip>
-              </CircleMarker>
-            ))}
+            <Polygon positions={squareAround(DMA08_OUTLET_POINT)} pathOptions={{ color: '#7F1D1D', fillColor: '#EF4444', fillOpacity: 0.95, weight: 2 }} />
 
-            {hardwareHint ? (
-              <CircleMarker center={hardwarePoints[hardwarePoints.length - 1] ?? activeDma?.center ?? DEFAULT_CENTER} radius={0} pathOptions={{ color: 'transparent', fillOpacity: 0 }}>
-                <Tooltip permanent direction="right" opacity={1}>
-                  <div className="rounded border border-border bg-panel px-2 py-1 text-[11px] text-text-muted">{hardwareHint}</div>
-                </Tooltip>
-              </CircleMarker>
-            ) : null}
+            <Polygon positions={diamondAround(DMA08_INLET_POINT)} pathOptions={{ color: '#78350F', fillColor: '#F59E0B', fillOpacity: 0.95, weight: 2 }} />
+
+            <CircleMarker center={DMA08_OUTLET_POINT} radius={0} pathOptions={{ color: 'transparent', fillOpacity: 0 }}>
+              <Tooltip permanent direction="top" opacity={1}>
+                <div className="rounded border border-border bg-panel px-2 py-0.5 font-mono text-[10px] text-text">Outlet</div>
+              </Tooltip>
+            </CircleMarker>
+
+            <CircleMarker center={DMA08_INLET_POINT} radius={0} pathOptions={{ color: 'transparent', fillOpacity: 0 }}>
+              <Tooltip permanent direction="bottom" opacity={1}>
+                <div className="rounded border border-border bg-panel px-2 py-0.5 font-mono text-[10px] text-text">Inlet</div>
+              </Tooltip>
+            </CircleMarker>
           </Pane>
         ) : null}
 

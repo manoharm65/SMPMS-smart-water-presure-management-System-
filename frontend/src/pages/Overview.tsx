@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { Chart, registerables } from 'chart.js'
 import { getZones, getKPI, getPressureHistory, usePolling, getMpcStatus, type Zone, type KPI, type PressureHistory, type MpcStatus } from '../services/api'
 
@@ -17,6 +17,17 @@ const trendIcons: Record<string, string> = {
   stable: '→',
 }
 
+const hardwarePipeColors: Record<string, string> = {
+  crit: '#E8001D',
+  warn: '#CC5500',
+  low: '#D4A017',
+  ok: '#007A3D',
+}
+
+function normalizeZoneId(zoneId: string) {
+  return zoneId.replace(/[-_\s]/g, '').toUpperCase()
+}
+
 export default function Overview() {
   const chartRef = useRef<HTMLCanvasElement>(null)
   const chartInstanceRef = useRef<Chart | null>(null)
@@ -28,6 +39,24 @@ export default function Overview() {
   const [error, setError] = useState<string | null>(null)
 const [chartLoading, setChartLoading] = useState(false)
   const [mpcStatus, setMpcStatus] = useState<MpcStatus | null>(null)
+
+  const hardwareDma = useMemo(() => {
+    const exact = zones.find((z) => normalizeZoneId(z.id) === 'DMA08')
+    if (exact) return exact
+    return zones.find((z) => normalizeZoneId(z.id).includes('DMA08')) ?? null
+  }, [zones])
+
+  const hardwareFlow = useMemo(() => {
+    if (!hardwareDma) return null
+    return hardwareDma.flow_rate ?? hardwareDma.flowRate ?? null
+  }, [hardwareDma])
+
+  const hardwareValve = useMemo(() => {
+    if (!hardwareDma) return null
+    return hardwareDma.valvePosition ?? hardwareDma.valve_position
+  }, [hardwareDma])
+
+  const hardwarePipeColor = hardwareDma ? (hardwarePipeColors[hardwareDma.status] ?? '#6B7280') : '#9CA3AF'
 
   const fetchZones = useCallback(async () => {
     try {
@@ -373,6 +402,21 @@ const [chartLoading, setChartLoading] = useState(false)
               </div>
             )}
             <canvas ref={chartRef} />
+          </div>
+
+          <div className="mt-5 border border-rule rounded p-4 bg-paper">
+            <h3 className="font-syne font-bold text-[16px] text-ink">DMA-08 Hardware Model Link</h3>
+            <div className="mt-2 space-y-1 font-mono text-[12px] text-ink">
+              <div>Pressure: {hardwareDma ? `${hardwareDma.pressure.toFixed(2)} BAR` : 'N/A'}</div>
+              <div>Flow: {hardwareFlow !== null ? `${Number(hardwareFlow).toFixed(1)} L/s` : 'N/A'}</div>
+              <div>Valve: {hardwareValve !== null ? `${Number(hardwareValve).toFixed(0)}%` : 'N/A'}</div>
+              <div>Status: {hardwareDma?.status?.toUpperCase() ?? 'UNKNOWN'}</div>
+            </div>
+
+            <div className="mt-3">
+              <div className="font-condensed text-[10px] uppercase tracking-wider text-dim mb-1">Pipe State</div>
+              <div className="h-2 rounded" style={{ backgroundColor: hardwarePipeColor }} />
+            </div>
           </div>
         </div>
       </div>
