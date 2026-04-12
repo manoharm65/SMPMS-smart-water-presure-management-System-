@@ -153,9 +153,8 @@ void setup() {
 
     connectWiFi();
 
-    valveServo.attach(SERVO_CONTROL_PIN);
+    valveServo.attach(SERVO_CONTROL_PIN, 544, 2400);
     setServoPosition(50);
-
     // Always re-register on boot to get a fresh API key
     currentState = STATE_REGISTERING;
     Serial.println("[Setup] Going to REGISTER");
@@ -247,7 +246,7 @@ float readFlowSensor() {
     static unsigned long lastPulseCount = 0;
     static unsigned long lastReadTime = 0;
     static uint32_t pulseCount = 0;
-    
+
     // Count pulses for 1 second
     unsigned long now = millis();
     if (now - lastReadTime >= 1000) {
@@ -258,7 +257,7 @@ float readFlowSensor() {
         pulseCount = 0;
         return constrain(flowRate, 0.0f, 100.0f);
     }
-    
+
     // Simulate some flow for demo
     pulseCount = random(10, 50);
     return 0.0f; // Return 0 during measurement period
@@ -505,13 +504,13 @@ void sendTelemetry() {
     doc["pressure"]      = roundf(pressure * 100.0f) / 100.0f;
     doc["valvePosition"] = valvePos;
     doc["timestamp"]     = isoTimestamp();
-    
+
     #if ENABLE_FLOW_SENSOR
     float flowRate = readFlowSensor();
     doc["flowSensor"]    = roundf(flowRate * 100.0f) / 100.0f;
     Serial.println("[Telemetry] Flow=" + String(flowRate, 2) + " L/min");
     #endif
-    
+
     String payload;
     serializeJson(doc, payload);
 
