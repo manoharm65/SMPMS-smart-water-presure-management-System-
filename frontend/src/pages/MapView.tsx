@@ -2,12 +2,10 @@ import 'leaflet/dist/leaflet.css'
 import { useEffect } from 'react'
 import PipelineMap from '../components/map/PipelineMap'
 import ZoneInspector from '../components/panels/ZoneInspector'
-import { useMapData } from '../hooks/useMapData'
 import { connectPressureSocket } from '../services/socket'
 import { useDashboardStore } from '../store/dashboardStore'
 
 export default function MapView() {
-  const q = useMapData()
   const upsertTelemetry = useDashboardStore((s) => s.upsertTelemetry)
   const setConnection = useDashboardStore((s) => s.setConnection)
   const selectValve = useDashboardStore((s) => s.selectValve)
@@ -28,7 +26,7 @@ export default function MapView() {
   }, [setConnection, upsertTelemetry, zonesGeo])
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-paper">
+    <div className="flex h-full w-full overflow-hidden bg-ink">
       <div className="relative flex-1">
         {mapDataStatus === 'error' ? (
           <div className="p-4 text-sm text-text-muted">
@@ -38,13 +36,7 @@ export default function MapView() {
           <PipelineMap onValveSelect={selectValve} onPipelineSelect={selectPipeline} />
         )}
 
-        <div className="pointer-events-none absolute left-3 top-3 z-[600] rounded border border-border bg-panel/90 px-3 py-2">
-          <div className="text-[11px] uppercase tracking-wider text-text-faint">Map data</div>
-          <div className="font-mono text-xs text-text">
-            {q.isLoading ? 'LOADING' : q.isError ? 'ERROR' : 'READY'}
-          </div>
         </div>
-      </div>
 
       <ZoneInspector />
     </div>
