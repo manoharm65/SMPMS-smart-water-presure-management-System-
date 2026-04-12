@@ -4,6 +4,7 @@ import { validateDto } from '../../utils/validators.js';
 import { CreateEspTelemetryDto } from './dto/create-esp-telemetry.dto.js';
 import { SyncTelemetryDto } from './dto/sync-telemetry.dto.js';
 import { telemetryService } from '../telemetry/telemetry.service.js';
+import { getDatabase } from '../../database/db.js';
 
 const router = Router();
 
@@ -49,6 +50,24 @@ router.post('/sync', async (req: EspAuthenticatedRequest, res: Response): Promis
     res.json({ synced });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// GET /api/v1/esp/latest/:nodeId (ESP polling for latest pressure setpoint)
+router.get('/latest/:nodeId', async (req: EspAuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const db = getDatabase();
+    const result = db.exec(
+      `SELECT pressure FROM telemetry
+       WHERE node_id = ? ORDER BY created_at DESC LIMIT 1`,
+      [req.params.nodeId]
+    );
+    const row = result.length > 0 && result[0].values.length > 0 
+      ? { pressure: result[0].values[0][0] } 
+      : { pressure: 3.5 };
+    res.json(row);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 

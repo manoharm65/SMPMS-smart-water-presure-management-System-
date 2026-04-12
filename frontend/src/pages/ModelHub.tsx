@@ -32,6 +32,15 @@ export default function ModelHub() {
     toggleMotorized,
     loading,
     error,
+    controlSimulationEnabled,
+    mpcSimulationValve1,
+    mpcSimulationValve2,
+    leakSimulationValve1,
+    leakSimulationValve2,
+    setMpcSimulation,
+    runMpcSimulation,
+    setLeakSimulation,
+    runLeakSimulation,
   } = useModelHubStore()
 
   const [showScenarioModal, setShowScenarioModal] = useState(false)
@@ -106,13 +115,34 @@ export default function ModelHub() {
               </div>
             }
             actions={
-              <button
-                onClick={() => setShowScenarioModal(true)}
-                disabled={runningScenario}
-                className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors disabled:opacity-50"
-              >
-                {runningScenario ? 'Running...' : 'Run Scenario'}
-              </button>
+              controlSimulationEnabled ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setMpcSimulation(20, 0)
+                      window.alert('Valve 1: 20%, Valve 2: 0%')
+                    }}
+                    className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors"
+                  >
+                    SET
+                  </button>
+                  <button
+                    onClick={runMpcSimulation}
+                    disabled={runningScenario}
+                    className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors disabled:opacity-50"
+                  >
+                    {runningScenario ? 'Running...' : 'RUN'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowScenarioModal(true)}
+                  disabled={runningScenario}
+                  className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors disabled:opacity-50"
+                >
+                  {runningScenario ? 'Running...' : 'Run Scenario'}
+                </button>
+              )
             }
           >
             <div className="p-4 h-full flex items-center justify-center">
@@ -172,13 +202,34 @@ export default function ModelHub() {
               </div>
             }
             actions={
-              <button
-                onClick={() => setShowScenarioModal(true)}
-                disabled={runningScenario}
-                className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors disabled:opacity-50"
-              >
-                {runningScenario ? 'Running...' : 'Run Scenario'}
-              </button>
+              controlSimulationEnabled ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setLeakSimulation(50, 10)
+                      window.alert('Valve 1: 50%, Valve 2: 10%')
+                    }}
+                    className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors"
+                  >
+                    SET
+                  </button>
+                  <button
+                    onClick={runLeakSimulation}
+                    disabled={runningScenario}
+                    className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors disabled:opacity-50"
+                  >
+                    {runningScenario ? 'Running...' : 'RUN'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowScenarioModal(true)}
+                  disabled={runningScenario}
+                  className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors disabled:opacity-50"
+                >
+                  {runningScenario ? 'Running...' : 'Run Scenario'}
+                </button>
+              )
             }
           >
             <div className="p-4 h-full">

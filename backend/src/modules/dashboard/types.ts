@@ -1,6 +1,6 @@
 // Zone summary (GET /zones)
 export interface ZoneSummary {
-  id: string;           // "DMA-01"
+  id: string;           // "valve_1"
   name: string;
   lat: number;
   lng: number;

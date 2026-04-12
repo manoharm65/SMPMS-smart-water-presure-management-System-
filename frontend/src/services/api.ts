@@ -314,6 +314,18 @@ export async function sendValveCommand(
   return apiPost<ValveCommandResponse>(`${CONTROL_BASE}/valve`, command, cfg)
 }
 
+export async function sendDirectValveOverride(
+  nodeId: string,
+  position: number,
+  cfg?: ApiConfig
+): Promise<{ success: boolean; node_id: string; position: number; timestamp: string }> {
+  return apiPost<{ success: boolean; node_id: string; position: number; timestamp: string }>(
+    `/api/v1/simulation/valve-override`,
+    { node_id: nodeId, position },
+    cfg
+  )
+}
+
 export async function setControlMode(
   mode: 'auto' | 'manual',
   cfg?: ApiConfig

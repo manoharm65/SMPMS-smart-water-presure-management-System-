@@ -41,6 +41,11 @@ type ModelHubState = {
   runningScenario: boolean
   loading: boolean
   error: string | null
+  controlSimulationEnabled: boolean
+  mpcSimulationValve1: number
+  mpcSimulationValve2: number
+  leakSimulationValve1: number
+  leakSimulationValve2: number
 
   setActiveTab: (tab: ModelHubTab) => void
   fetchModelStatus: () => Promise<void>
@@ -52,6 +57,10 @@ type ModelHubState = {
   fetchIwedsData: () => Promise<void>
   startScenario: (scenario: Scenario) => Promise<void>
   refreshAll: () => Promise<void>
+  setMpcSimulation: (valve1: number, valve2: number) => void
+  runMpcSimulation: () => Promise<void>
+  setLeakSimulation: (valve1: number, valve2: number) => void
+  runLeakSimulation: () => Promise<void>
 }
 
 function calculateExpectedFlow(pressure: number): number {
@@ -151,6 +160,11 @@ export const useModelHubStore = create<ModelHubState>((set, get) => ({
   runningScenario: false,
   loading: true,
   error: null,
+  controlSimulationEnabled: false,
+  mpcSimulationValve1: 20,
+  mpcSimulationValve2: 0,
+  leakSimulationValve1: 50,
+  leakSimulationValve2: 10,
 
   setActiveTab: (tab) => set({ activeTab: tab }),
 
@@ -330,5 +344,39 @@ export const useModelHubStore = create<ModelHubState>((set, get) => ({
       fetchIwedsData(),
     ])
     set({ loading: false })
+  },
+
+  setMpcSimulation: (valve1, valve2) => set({ mpcSimulationValve1: valve1, mpcSimulationValve2: valve2 }),
+
+  runMpcSimulation: async () => {
+    const { mpcSimulationValve1, mpcSimulationValve2 } = get()
+    set({ runningScenario: true })
+    
+    // Show alert - MPC model is running (using browser alert for simulation)
+    window.alert('MPC model is running')
+    
+    // Wait 1 second then set valve 1 to 40%
+    setTimeout(async () => {
+      try {
+        const { sendDirectValveOverride } = await import('../services/api')
+        await sendDirectValveOverride('valve_1', 40)
+      } catch (e) {
+        console.error('Failed to set valve:', e)
+      }
+      set({ runningScenario: false })
+    }, 1000)
+  },
+
+  setLeakSimulation: (valve1, valve2) => set({ leakSimulationValve1: valve1, leakSimulationValve2: valve2 }),
+
+  runLeakSimulation: async () => {
+    const { leakSimulationValve1, leakSimulationValve2 } = get()
+    set({ runningScenario: true })
+    
+    // Wait 5 seconds then show alert
+    setTimeout(() => {
+      window.alert('Minor leakage detected')
+      set({ runningScenario: false })
+    }, 5000)
   },
 }))
