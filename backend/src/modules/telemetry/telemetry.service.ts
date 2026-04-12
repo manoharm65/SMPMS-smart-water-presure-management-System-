@@ -126,8 +126,8 @@ export class TelemetryService {
       pressure_bar: dto.pressure,
       flow_lps: dto.flowSensor ? dto.flowSensor / 60 : 10, // Convert L/min to L/s if provided
       valve_pct: dto.valvePosition || node.currentPosition || 50,
-      elevation_m: dto.nodeId === 'DMA-01' ? 10 : dto.nodeId === 'DMA-02' ? 45 : 20,
-      setpoint_bar: dto.nodeId === 'DMA-01' ? 3.0 : dto.nodeId === 'DMA-02' ? 2.5 : 2.8,
+      elevation_m: dto.nodeId === 'valve_1' ? 10 : dto.nodeId === 'valve_2' ? 45 : 20,
+      setpoint_bar: dto.nodeId === 'valve_1' ? 3.0 : dto.nodeId === 'valve_2' ? 2.5 : 2.8,
       min_pressure_bar: 1.5,
       max_pressure_bar: 5.5,
     });

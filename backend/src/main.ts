@@ -20,12 +20,13 @@ import alertRouter from './modules/alert/alert.controller.js';
 import commandRouter from './modules/command/command.controller.js';
 import healthRouter from './modules/health/health.controller.js';
 import dashboardRouter from './modules/dashboard/dashboard.controller.js';
+import { mlRuntimeService } from './modules/dashboard/ml-runtime.service.js';
 import espRouter from './modules/esp/esp.controller.js';
 import mpcRouter from './modules/mpc/mpc.routes.js';
 import { mpcService } from './modules/mpc/mpc.service.js';
 import iwedsRouter from './modules/iweds/iweds.controller.js';
-import { mlRuntimeService } from './modules/dashboard/ml-runtime.service.js';
 import integrationRouter from './modules/integration/integration.controller.js';
+import espPublicRouter from './modules/esp/esp-public.controller.js';
 import { integrationOrchestrator } from './modules/integration/integration.orchestrator.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -72,6 +73,7 @@ async function bootstrap() {
   app.use('/api/v1/commands', commandRouter);
   app.use('/api/v1/dashboard', dashboardRouter);
   app.use('/api/v1/esp', espRouter);
+  app.use('/api/v1/esp-public', espPublicRouter);
   app.use('/api/v1/mpc', mpcRouter);
   app.use('/api/v1/iweds', iwedsRouter);
   app.use('/api/v1/integration', integrationRouter);

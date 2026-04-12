@@ -23,7 +23,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
   // Mock node for auth
   const mockNode = {
     id: 'node-uuid-1',
-    nodeId: 'DMA-01',
+    nodeId: 'valve_1',
     name: 'Test Node',
     isActive: true,
     status: 'online' as const,
@@ -35,7 +35,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
   // Mock pending command for piggyback
   const mockPendingCommand = {
     id: 'cmd-123',
-    nodeId: 'DMA-01',
+    nodeId: 'valve_1',
     command: 'REDUCE_FLOW',
     status: 'PENDING',
     priority: 'warning' as const,
@@ -62,7 +62,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       }
       const apiKey = authHeader.slice(7);
       if (apiKey === 'valid-api-key-123') {
-        (req as any).nodeId = 'DMA-01';
+        (req as any).nodeId = 'valve_1';
         next();
       } else if (apiKey === 'invalid-api-key') {
         _res.status(401).json({ error: 'Invalid API key' });
@@ -102,7 +102,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
 
       const response = await request(testApp)
         .post('/api/v1/esp/telemetry')
-        .send({ nodeId: 'DMA-01', pressure: 10.5, valvePosition: 50, timestamp: new Date().toISOString() });
+        .send({ nodeId: 'valve_1', pressure: 10.5, valvePosition: 50, timestamp: new Date().toISOString() });
 
       expect(response.status).toBe(401);
       expect(response.body.error).toBe('Missing Bearer token');
@@ -128,7 +128,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       const response = await request(testApp)
         .post('/api/v1/esp/telemetry')
         .set('Authorization', 'Bearer invalid-api-key')
-        .send({ nodeId: 'DMA-01', pressure: 10.5, valvePosition: 50, timestamp: new Date().toISOString() });
+        .send({ nodeId: 'valve_1', pressure: 10.5, valvePosition: 50, timestamp: new Date().toISOString() });
 
       expect(response.status).toBe(401);
       expect(response.body.error).toBe('Invalid API key');
@@ -187,7 +187,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       const response = await request(testApp)
         .post('/api/v1/esp/telemetry')
         .set('Authorization', 'Bearer valid-api-key-123')
-        .send({ nodeId: 'DMA-01', valvePosition: 50, timestamp: new Date().toISOString() });
+        .send({ nodeId: 'valve_1', valvePosition: 50, timestamp: new Date().toISOString() });
 
       expect(response.status).toBe(400);
     });
@@ -213,7 +213,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       const response = await request(testApp)
         .post('/api/v1/esp/telemetry')
         .set('Authorization', 'Bearer valid-api-key-123')
-        .send({ nodeId: 'DMA-01', pressure: 10.5, timestamp: new Date().toISOString() });
+        .send({ nodeId: 'valve_1', pressure: 10.5, timestamp: new Date().toISOString() });
 
       expect(response.status).toBe(400);
     });
@@ -239,7 +239,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       const response = await request(testApp)
         .post('/api/v1/esp/telemetry')
         .set('Authorization', 'Bearer valid-api-key-123')
-        .send({ nodeId: 'DMA-01', pressure: 10.5, valvePosition: 50 });
+        .send({ nodeId: 'valve_1', pressure: 10.5, valvePosition: 50 });
 
       expect(response.status).toBe(400);
     });
@@ -267,7 +267,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       const response = await request(testApp)
         .post('/api/v1/esp/telemetry')
         .set('Authorization', 'Bearer valid-api-key-123')
-        .send({ nodeId: 'DMA-01', pressure: 10.5, valvePosition: 50, timestamp: 'invalid-date' });
+        .send({ nodeId: 'valve_1', pressure: 10.5, valvePosition: 50, timestamp: 'invalid-date' });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Invalid timestamp format');
@@ -307,7 +307,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       MockedNodeRepository.prototype.findByNodeId.mockReturnValue(mockNode as any);
       MockedTelemetryRepository.prototype.create.mockReturnValue({
         id: 'telemetry-uuid-1',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         pressure: 10.5,
         valvePosition: 50,
         timestamp: new Date().toISOString(),
@@ -329,7 +329,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
         .post('/api/v1/esp/telemetry')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           pressure: 10.5,
           valvePosition: 50,
           timestamp: new Date().toISOString(),
@@ -346,7 +346,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       MockedNodeRepository.prototype.findByNodeId.mockReturnValue(mockNode as any);
       MockedTelemetryRepository.prototype.create.mockReturnValue({
         id: 'telemetry-uuid-1',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         pressure: 10.5,
         valvePosition: 50,
         timestamp: new Date().toISOString(),
@@ -369,7 +369,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
         .post('/api/v1/esp/telemetry')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           pressure: 10.5,
           valvePosition: 50,
           timestamp: new Date().toISOString(),
@@ -390,7 +390,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       MockedNodeRepository.prototype.findByNodeId.mockReturnValue(mockNode as any);
       MockedTelemetryRepository.prototype.create.mockReturnValue({
         id: 'telemetry-uuid-1',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         pressure: 10.5,
         valvePosition: 50,
         timestamp: new Date().toISOString(),
@@ -414,7 +414,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
         .post('/api/v1/esp/telemetry')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           pressure: 10.5,
           valvePosition: 50,
           timestamp: new Date().toISOString(),
@@ -422,7 +422,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
 
       expect(eventBus.emitTelemetryReceived).toHaveBeenCalledWith(
         expect.objectContaining({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           pressure: 10.5,
         })
       );
@@ -432,7 +432,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       MockedNodeRepository.prototype.findByNodeId.mockReturnValue(mockNode as any);
       MockedTelemetryRepository.prototype.create.mockReturnValue({
         id: 'telemetry-uuid-1',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         pressure: 10.5,
         valvePosition: 50,
         timestamp: new Date().toISOString(),
@@ -455,14 +455,14 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
         .post('/api/v1/esp/telemetry')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           pressure: 10.5,
           valvePosition: 50,
           timestamp: new Date().toISOString(),
         });
 
       expect(MockedNodeRepository.prototype.updateStatusAndLastSeen).toHaveBeenCalledWith(
-        'DMA-01',
+        'valve_1',
         'online',
         expect.any(String)
       );
@@ -474,7 +474,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       MockedNodeRepository.prototype.findByNodeId.mockReturnValue(mockNode as any);
       MockedTelemetryRepository.prototype.create.mockReturnValue({
         id: 'telemetry-uuid-1',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         pressure: 0,
         valvePosition: 50,
         timestamp: new Date().toISOString(),
@@ -496,7 +496,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
         .post('/api/v1/esp/telemetry')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           pressure: 0,
           valvePosition: 50,
           timestamp: new Date().toISOString(),
@@ -510,7 +510,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       MockedNodeRepository.prototype.findByNodeId.mockReturnValue(mockNode as any);
       MockedTelemetryRepository.prototype.create.mockReturnValue({
         id: 'telemetry-uuid-1',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         pressure: 100,
         valvePosition: 50,
         timestamp: new Date().toISOString(),
@@ -532,7 +532,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
         .post('/api/v1/esp/telemetry')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           pressure: 100,
           valvePosition: 50,
           timestamp: new Date().toISOString(),
@@ -546,7 +546,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
       MockedNodeRepository.prototype.findByNodeId.mockReturnValue(mockNode as any);
       MockedTelemetryRepository.prototype.create.mockReturnValue({
         id: 'telemetry-uuid-1',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         pressure: 10.5,
         valvePosition: 0,
         timestamp: new Date().toISOString(),
@@ -568,7 +568,7 @@ describe('ESP Telemetry API (POST /api/v1/esp/telemetry)', () => {
         .post('/api/v1/esp/telemetry')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           pressure: 10.5,
           valvePosition: 0,
           timestamp: new Date().toISOString(),

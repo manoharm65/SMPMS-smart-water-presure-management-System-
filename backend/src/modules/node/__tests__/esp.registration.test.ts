@@ -80,7 +80,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       const response = await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           ipAddress: '192.168.1.100',
         });
 
@@ -107,7 +107,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       const response = await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           firmwareVersion: '1.0.0',
         });
 
@@ -162,7 +162,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       const response = await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           firmwareVersion: 100,
           ipAddress: '192.168.1.100',
         });
@@ -176,7 +176,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
     it('should register a new node successfully', async () => {
       const newNode = {
         id: 'new-node-uuid',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         name: undefined,
         location: undefined,
         isActive: true,
@@ -216,14 +216,14 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       const response = await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           firmwareVersion: '1.0.0',
           ipAddress: '192.168.1.100',
         });
 
       expect(response.status).toBe(200);
       expect(response.body.registered).toBe(true);
-      expect(response.body.node_id).toBe('DMA-01');
+      expect(response.body.node_id).toBe('valve_1');
       expect(response.body.telemetry_interval_ms).toBe(10000);
       expect(response.body.pressure_thresholds).toEqual({
         critical_high: 5.5,
@@ -236,7 +236,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
     it('should generate a new API key for new node', async () => {
       const newNode = {
         id: 'new-node-uuid',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         isActive: true,
         status: 'online' as const,
         apiKey: undefined,
@@ -270,7 +270,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       const response = await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           firmwareVersion: '1.0.0',
           ipAddress: '192.168.1.100',
         });
@@ -284,7 +284,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       MockedNodeRepository.prototype.findByNodeId.mockReturnValue(null);
       MockedNodeRepository.prototype.create.mockReturnValue({
         id: 'new-node-uuid',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         isActive: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -307,12 +307,12 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           firmwareVersion: '1.0.0',
           ipAddress: '192.168.1.100',
         });
 
-      expect(MockedNodeRepository.prototype.create).toHaveBeenCalledWith('DMA-01', undefined, undefined);
+      expect(MockedNodeRepository.prototype.create).toHaveBeenCalledWith('valve_1', undefined, undefined);
     });
   });
 
@@ -320,7 +320,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
     it('should reuse existing node and regenerate API key', async () => {
       const existingNode = {
         id: 'existing-node-uuid',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         name: 'Existing Node',
         isActive: true,
         status: 'online' as const,
@@ -354,7 +354,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       const response = await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           firmwareVersion: '1.0.0',
           ipAddress: '192.168.1.100',
         });
@@ -368,7 +368,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
     it('should not create new node if node already exists', async () => {
       const existingNode = {
         id: 'existing-node-uuid',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         isActive: true,
         status: 'online' as const,
         apiKey: 'existing-api-key',
@@ -395,7 +395,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           firmwareVersion: '1.0.0',
           ipAddress: '192.168.1.100',
         });
@@ -406,7 +406,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
     it('should update node status to online on re-registration', async () => {
       const existingNode = {
         id: 'existing-node-uuid',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         isActive: true,
         status: 'offline' as const,
         apiKey: 'existing-api-key',
@@ -433,13 +433,13 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           firmwareVersion: '1.0.0',
           ipAddress: '192.168.1.100',
         });
 
       expect(MockedNodeRepository.prototype.updateStatusAndLastSeen).toHaveBeenCalledWith(
-        'DMA-01',
+        'valve_1',
         'online',
         undefined
       );
@@ -451,7 +451,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       MockedNodeRepository.prototype.findByNodeId.mockReturnValue(null);
       MockedNodeRepository.prototype.create.mockReturnValue({
         id: 'new-node-uuid',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         isActive: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -484,7 +484,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       const response = await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           firmwareVersion: '1.0.0',
           ipAddress: '192.168.1.100',
         });
@@ -506,7 +506,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       MockedNodeRepository.prototype.findByNodeId.mockReturnValue(null);
       MockedNodeRepository.prototype.create.mockReturnValue({
         id: 'new-node-uuid',
-        nodeId: 'DMA-01-SPECIAL',
+        nodeId: 'valve_1-SPECIAL',
         isActive: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -529,20 +529,20 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       const response = await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA-01-SPECIAL',
+          nodeId: 'valve_1-SPECIAL',
           firmwareVersion: '1.0.0',
           ipAddress: '192.168.1.100',
         });
 
       expect(response.status).toBe(200);
-      expect(response.body.node_id).toBe('DMA-01-SPECIAL');
+      expect(response.body.node_id).toBe('valve_1-SPECIAL');
     });
 
     it('should handle very long firmware version string', async () => {
       MockedNodeRepository.prototype.findByNodeId.mockReturnValue(null);
       MockedNodeRepository.prototype.create.mockReturnValue({
         id: 'new-node-uuid',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         isActive: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -565,7 +565,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       const response = await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           firmwareVersion: '1.0.0-beta.2+build.1234567890abcdef',
           ipAddress: '192.168.1.100',
         });
@@ -577,7 +577,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       MockedNodeRepository.prototype.findByNodeId.mockReturnValue(null);
       MockedNodeRepository.prototype.create.mockReturnValue({
         id: 'new-node-uuid',
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         isActive: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -600,7 +600,7 @@ describe('ESP Node Registration API (POST /api/v1/nodes/register)', () => {
       const response = await request(testApp)
         .post('/api/v1/nodes/register')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           firmwareVersion: '1.0.0',
           ipAddress: '2001:0db8:85a3:0000:0000:8a2e:0370:7334',
         });
