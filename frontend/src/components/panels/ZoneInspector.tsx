@@ -18,11 +18,13 @@ function CollapsibleSection({
   isOpen,
   onToggle,
   children,
+  badge,
 }: {
   title: string
   isOpen: boolean
   onToggle: () => void
   children: React.ReactNode
+  badge?: React.ReactNode
 }) {
   return (
     <div className="border-b border-rule">
@@ -33,15 +35,33 @@ function CollapsibleSection({
         <div className="text-[11px] uppercase tracking-wider text-muted">
           {title}
         </div>
-        <div
-          className={`text-paper transition-transform duration-200 ${
-            isOpen ? 'rotate-90' : ''
-          }`}
-        >
-          ▸
+        <div className="flex items-center gap-2">
+          {badge}
+          <div
+            className={`text-paper transition-transform duration-200 ${
+              isOpen ? 'rotate-90' : ''
+            }`}
+          >
+            ▸
+          </div>
         </div>
       </button>
       {isOpen && <div className="px-3 pb-3">{children}</div>}
+    </div>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const colors: Record<string, string> = {
+    critical: 'border-signal/50 bg-signal/10 text-signal',
+    warning: 'border-warn/50 bg-warn/10 text-warn',
+    low: 'border-low/50 bg-low/10 text-low',
+    ok: 'border-pass/50 bg-pass/10 text-pass',
+  }
+  const color = colors[status] ?? 'border-dim/50 bg-dim/10 text-dim'
+  return (
+    <div className={`rounded border px-2 py-1 font-mono text-[11px] tracking-wide ${color}`}>
+      {status.toUpperCase()}
     </div>
   )
 }
@@ -59,17 +79,17 @@ export default function ZoneInspector() {
   const zones = useDashboardStore((s) => s.zones)
   const zonesGeo = useDashboardStore((s) => s.zonesGeo)
 
-  const [propertiesOpen, setPropertiesOpen] = useState(false)
   const [mapsOpen, setMapsOpen] = useState(true)
-
-  const handlePropertiesToggle = () => {
-    setPropertiesOpen(!propertiesOpen)
-    if (!propertiesOpen) setMapsOpen(false)
-  }
+  const [propertiesOpen, setPropertiesOpen] = useState(false)
 
   const handleMapsToggle = () => {
     setMapsOpen(!mapsOpen)
     if (!mapsOpen) setPropertiesOpen(false)
+  }
+
+  const handlePropertiesToggle = () => {
+    setPropertiesOpen(!propertiesOpen)
+    if (!propertiesOpen) setMapsOpen(false)
   }
 
   const selectedDmaMeta = useMemo(
@@ -144,9 +164,23 @@ export default function ZoneInspector() {
     return pairs
   }, [data])
 
+  const mapStatusBadge = (
+    <div
+      className={`rounded border px-2 py-1 font-mono text-[11px] tracking-wide ${
+        q.isLoading
+          ? 'border-warn/50 bg-warn/10 text-warn'
+          : q.isError
+            ? 'border-signal/50 bg-signal/10 text-signal'
+            : 'border-pass/50 bg-pass/10 text-pass'
+      }`}
+    >
+      {q.isLoading ? 'LOADING' : q.isError ? 'ERROR' : 'READY'}
+    </div>
+  )
+
   return (
-    <aside className="flex w-[360px] flex-col border-l border-rule bg-ink">
-      <div className="border-b border-rule px-3 py-2">
+    <aside className="flex w-[320px] flex-col border-l border-rule bg-ink">
+      <div className="border-b border-rule px-3 py-3">
         <div className="text-[11px] uppercase tracking-wider text-muted">
           Inspector
         </div>
@@ -176,31 +210,19 @@ export default function ZoneInspector() {
         title="Maps"
         isOpen={mapsOpen}
         onToggle={handleMapsToggle}
+        badge={mapStatusBadge}
       >
-        <div className="rounded border border-rule bg-bg px-3 py-2">
-          <div className="flex items-center justify-between">
-            <div className="text-[11px] uppercase tracking-wider text-muted">
-              Map data
-            </div>
-            <div
-              className={`rounded border px-2 py-1 font-mono text-[11px] tracking-wide ${
-                q.isLoading
-                  ? 'border-amber-500/50 bg-amber-500/10 text-amber-400'
-                  : q.isError
-                    ? 'border-red-500/50 bg-red-500/10 text-red-400'
-                    : 'border-accent/50 bg-accent/10 text-accent'
-              }`}
-            >
-              {q.isLoading ? 'LOADING' : q.isError ? 'ERROR' : 'READY'}
-            </div>
+        <div className="rounded border border-rule bg-paper/5 px-3 py-2">
+          <div className="text-xs text-muted">
+            Map data loaded from the data folder.
           </div>
         </div>
       </CollapsibleSection>
 
-      <div className="overflow-auto flex-1 px-3 py-1">
+      <div className="flex-1 overflow-auto p-3">
         {selectedDmaId && dmaCounts ? (
           <>
-            <div className="mt-2 rounded border border-rule bg-bg px-2 py-2">
+            <div className="rounded border border-rule bg-paper/5 px-3 py-2">
               <div className="flex items-center justify-between">
                 <div className="text-[11px] uppercase tracking-wider text-muted">
                   DMA Focus
@@ -228,7 +250,7 @@ export default function ZoneInspector() {
               value={dmaTelemetry ? `${dmaTelemetry.flowRate.toFixed(1)} L/s` : '--'}
             />
 
-            <div className="mt-3 rounded border border-rule bg-bg px-2 py-2">
+            <div className="mt-3 rounded border border-rule bg-paper/5 px-3 py-2">
               <div className="text-[11px] uppercase tracking-wider text-muted">
                 Hardware Mode
               </div>
@@ -249,25 +271,12 @@ export default function ZoneInspector() {
           </div>
         ) : (
           <>
-            <div className="mt-2 rounded border border-rule bg-bg px-2 py-2">
+            <div className="rounded border border-rule bg-paper/5 px-3 py-2">
               <div className="flex items-center justify-between">
                 <div className="text-[11px] uppercase tracking-wider text-muted">
                   Live Snapshot
                 </div>
-                <div
-                  className={
-                    'rounded border px-2 py-1 font-mono text-[11px] tracking-wide ' +
-                    (data.telemetry?.status === 'critical'
-                      ? 'border-[rgba(240,77,77,0.35)] bg-[rgba(240,77,77,0.08)] text-critical'
-                      : data.telemetry?.status === 'warning'
-                        ? 'border-[rgba(245,166,35,0.35)] bg-[rgba(245,166,35,0.08)] text-warning'
-                        : data.telemetry?.status === 'low'
-                          ? 'border-[rgba(74,159,245,0.35)] bg-[rgba(74,159,245,0.08)] text-info'
-                          : 'border-[rgba(0,200,150,0.35)] bg-[rgba(0,200,150,0.08)] text-accent')
-                  }
-                >
-                  {(data.telemetry?.status ?? 'unknown').toUpperCase()}
-                </div>
+                <StatusBadge status={data.telemetry?.status ?? 'unknown'} />
               </div>
             </div>
 
@@ -316,23 +325,23 @@ export default function ZoneInspector() {
               isOpen={propertiesOpen}
               onToggle={handlePropertiesToggle}
             >
-              <div className="rounded border border-rule bg-bg px-2 py-2">
-              {properties.length === 0 ? (
-                <div className="text-xs text-muted">No properties available.</div>
-              ) : (
-                <div className="mt-2 max-h-[240px] space-y-1 overflow-auto pr-1">
-                  {properties.map(([k, v]) => (
-                    <div key={k} className="flex items-baseline justify-between gap-2">
-                      <div className="max-w-[160px] truncate text-[11px] text-muted">{k}</div>
-                      <div className="max-w-[160px] truncate font-mono text-[11px] text-paper">{v}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="rounded border border-rule bg-paper/5 px-2 py-2">
+                {properties.length === 0 ? (
+                  <div className="text-xs text-muted">No properties available.</div>
+                ) : (
+                  <div className="mt-2 max-h-[240px] space-y-1 overflow-auto pr-1">
+                    {properties.map(([k, v]) => (
+                      <div key={k} className="flex items-baseline justify-between gap-2">
+                        <div className="max-w-[160px] truncate text-[11px] text-muted">{k}</div>
+                        <div className="max-w-[160px] truncate font-mono text-[11px] text-paper">{v}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CollapsibleSection>
 
-            <div className="mt-3 rounded border border-rule bg-bg px-2 py-2">
+            <div className="mt-3 rounded border border-rule bg-paper/5 px-3 py-2">
               <div className="text-[11px] uppercase tracking-wider text-muted">
                 Notes
               </div>
