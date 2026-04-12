@@ -1,4 +1,4 @@
-﻿import { MPCConfig, HydraulicModel, defaultHydraulicModel } from './mpc.config.js';
+import { MPCConfig, HydraulicModel, defaultHydraulicModel } from './mpc.config.js';
 
 export interface MPCNodeState {
   id: string;

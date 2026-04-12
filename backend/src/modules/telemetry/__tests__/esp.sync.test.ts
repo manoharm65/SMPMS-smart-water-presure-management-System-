@@ -18,7 +18,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
   // Mock node for auth
   const mockNode = {
     id: 'node-uuid-1',
-    nodeId: 'DMA-01',
+    nodeId: 'valve_1',
     name: 'Test Node',
     isActive: true,
     status: 'online' as const,
@@ -43,7 +43,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
       }
       const apiKey = authHeader.slice(7);
       if (apiKey === 'valid-api-key-123') {
-        (req as any).nodeId = 'DMA-01';
+        (req as any).nodeId = 'valve_1';
         next();
       } else if (apiKey === 'invalid-api-key') {
         _res.status(401).json({ error: 'Invalid API key' });
@@ -68,7 +68,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
       const response = await request(testApp)
         .post('/api/v1/esp/telemetry/sync')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: 10.5, valvePosition: 50, timestamp: new Date().toISOString() },
           ],
@@ -95,7 +95,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer invalid-api-key')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: 10.5, valvePosition: 50, timestamp: new Date().toISOString() },
           ],
@@ -156,7 +156,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
         });
 
       expect(response.status).toBe(400);
@@ -183,7 +183,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: 'not-an-array',
         });
 
@@ -215,7 +215,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [],
         });
 
@@ -255,7 +255,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: 10.5 }, // missing valvePosition and timestamp
           ],
@@ -288,7 +288,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: 'invalid', valvePosition: 50, timestamp: new Date().toISOString() },
           ],
@@ -350,7 +350,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: 10.5, valvePosition: 50, timestamp },
           ],
@@ -381,7 +381,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: 10.5, valvePosition: 50, timestamp: new Date(baseTime.getTime()).toISOString() },
             { pressure: 10.6, valvePosition: 52, timestamp: new Date(baseTime.getTime() + 10000).toISOString() },
@@ -419,7 +419,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings,
         });
 
@@ -448,7 +448,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: 10.5, valvePosition: 50, timestamp: new Date(baseTime.getTime()).toISOString() },
             { pressure: 10.6, valvePosition: 52, timestamp: new Date(baseTime.getTime() + 10000).toISOString() },
@@ -457,7 +457,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
 
       // Should update last_seen to the last reading's timestamp
       expect(MockedNodeRepository.prototype.updateStatusAndLastSeen).toHaveBeenCalledWith(
-        'DMA-01',
+        'valve_1',
         'online',
         expect.any(String)
       );
@@ -484,7 +484,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: 10.5, valvePosition: 50, timestamp: new Date(baseTime.getTime()).toISOString() },
             { pressure: 10.6, valvePosition: 52, timestamp: new Date(baseTime.getTime() + 10000).toISOString() },
@@ -492,8 +492,8 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         });
 
       expect(MockedTelemetryRepository.prototype.createBulk).toHaveBeenCalledWith([
-        { nodeId: 'DMA-01', pressure: 10.5, valvePosition: 50, timestamp: expect.any(String) },
-        { nodeId: 'DMA-01', pressure: 10.6, valvePosition: 52, timestamp: expect.any(String) },
+        { nodeId: 'valve_1', pressure: 10.5, valvePosition: 50, timestamp: expect.any(String) },
+        { nodeId: 'valve_1', pressure: 10.6, valvePosition: 52, timestamp: expect.any(String) },
       ]);
     });
   });
@@ -519,7 +519,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: 0, valvePosition: 50, timestamp: new Date().toISOString() },
           ],
@@ -549,7 +549,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: -0.5, valvePosition: 50, timestamp: new Date().toISOString() },
           ],
@@ -579,7 +579,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: 10.5, valvePosition: 0, timestamp: new Date().toISOString() },
             { pressure: 10.6, valvePosition: 100, timestamp: new Date().toISOString() },
@@ -610,7 +610,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: 3.14159, valvePosition: 50, timestamp: new Date().toISOString() },
           ],
@@ -640,7 +640,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: 10.5, valvePosition: 50, timestamp: '2026-03-20T10:00:00.000Z' },
           ],
@@ -670,7 +670,7 @@ describe('ESP Telemetry Sync API (POST /api/v1/esp/telemetry/sync)', () => {
         .post('/api/v1/esp/telemetry/sync')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           readings: [
             { pressure: 10.5, valvePosition: 50, timestamp: '1742541600000' }, // Unix ms as string
           ],

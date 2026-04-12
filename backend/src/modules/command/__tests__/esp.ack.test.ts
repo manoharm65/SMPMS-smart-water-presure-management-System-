@@ -28,7 +28,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
   // Mock node for auth
   const mockNode = {
     id: 'node-uuid-1',
-    nodeId: 'DMA-01',
+    nodeId: 'valve_1',
     name: 'Test Node',
     isActive: true,
     status: 'online' as const,
@@ -40,7 +40,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
   // Mock dispatched command waiting for ACK
   const mockDispatchedCommand = {
     id: 'cmd-123',
-    nodeId: 'DMA-01',
+    nodeId: 'valve_1',
     command: 'REDUCE_FLOW',
     status: 'DISPATCHED',
     priority: 'warning' as const,
@@ -67,7 +67,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
       }
       const apiKey = authHeader.slice(7);
       if (apiKey === 'valid-api-key-123') {
-        (req as any).nodeId = 'DMA-01';
+        (req as any).nodeId = 'valve_1';
         next();
       } else if (apiKey === 'invalid-api-key') {
         _res.status(401).json({ error: 'Invalid API key' });
@@ -92,7 +92,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
       const response = await request(testApp)
         .post('/api/v1/esp/commands/cmd-123/ack')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: 75,
           timestamp: new Date().toISOString(),
@@ -119,7 +119,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer invalid-api-key')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: 75,
           timestamp: new Date().toISOString(),
@@ -148,7 +148,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands//ack') // Empty commandId
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: 75,
           timestamp: new Date().toISOString(),
@@ -206,7 +206,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           actualPosition: 75,
           timestamp: new Date().toISOString(),
         });
@@ -235,7 +235,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           timestamp: new Date().toISOString(),
         });
@@ -264,7 +264,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: 75,
         });
@@ -293,7 +293,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: 'true', // String instead of boolean
           actualPosition: 75,
           timestamp: new Date().toISOString(),
@@ -323,7 +323,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: '75', // String instead of number
           timestamp: new Date().toISOString(),
@@ -362,7 +362,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: 75,
           timestamp: new Date().toISOString(),
@@ -399,7 +399,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: 75,
           timestamp: new Date().toISOString(),
@@ -438,7 +438,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: false,
           actualPosition: 50, // Actual position when failed
           timestamp: new Date().toISOString(),
@@ -478,14 +478,14 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: 75,
           timestamp: new Date().toISOString(),
         });
 
       expect(MockedNodeRepository.prototype.updateValveState).toHaveBeenCalledWith(
-        'DMA-01',
+        'valve_1',
         { currentPosition: 75 }
       );
     });
@@ -515,14 +515,14 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/unknown-cmd/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: 75,
           timestamp: new Date().toISOString(),
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Command unknown-cmd not found for node DMA-01');
+      expect(response.body.error).toBe('Command unknown-cmd not found for node valve_1');
     });
   });
 
@@ -554,14 +554,14 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: false,
           actualPosition: 50,
           timestamp: new Date().toISOString(),
         });
 
       expect(eventBus.emitAlertTriggered).toHaveBeenCalledWith({
-        nodeId: 'DMA-01',
+        nodeId: 'valve_1',
         message: 'Valve command execution failed on node',
         riskLevel: 'WARNING',
       });
@@ -594,7 +594,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: 75,
           timestamp: new Date().toISOString(),
@@ -635,7 +635,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: 0,
           timestamp: new Date().toISOString(),
@@ -643,7 +643,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
 
       expect(response.status).toBe(200);
       expect(MockedNodeRepository.prototype.updateValveState).toHaveBeenCalledWith(
-        'DMA-01',
+        'valve_1',
         { currentPosition: 0 }
       );
     });
@@ -678,7 +678,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: 100,
           timestamp: new Date().toISOString(),
@@ -686,7 +686,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
 
       expect(response.status).toBe(200);
       expect(MockedNodeRepository.prototype.updateValveState).toHaveBeenCalledWith(
-        'DMA-01',
+        'valve_1',
         { currentPosition: 100 }
       );
     });
@@ -718,7 +718,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post('/api/v1/esp/commands/cmd-123/ack')
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: 75.5,
           timestamp: new Date().toISOString(),
@@ -758,7 +758,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
         .post(`/api/v1/esp/commands/${uuidCommandId}/ack`)
         .set('Authorization', 'Bearer valid-api-key-123')
         .send({
-          nodeId: 'DMA-01',
+          nodeId: 'valve_1',
           executed: true,
           actualPosition: 75,
           timestamp: new Date().toISOString(),
@@ -801,7 +801,7 @@ describe('ESP Command ACK API (POST /api/v1/esp/commands/:commandId/ack)', () =>
           .post('/api/v1/esp/commands/cmd-123/ack')
           .set('Authorization', 'Bearer valid-api-key-123')
           .send({
-            nodeId: 'DMA-01',
+            nodeId: 'valve_1',
             executed: true,
             actualPosition: 75,
             timestamp,

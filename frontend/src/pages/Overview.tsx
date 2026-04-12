@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Chart, registerables } from 'chart.js'
 import { getZones, getKPI, getPressureHistory, usePolling, getMpcStatus, type Zone, type KPI, type PressureHistory, type MpcStatus } from '../services/api'
 
@@ -29,6 +30,7 @@ function normalizeZoneId(zoneId: string) {
 }
 
 export default function Overview() {
+  const navigate = useNavigate()
   const chartRef = useRef<HTMLCanvasElement>(null)
   const chartInstanceRef = useRef<Chart | null>(null)
   const [zones, setZones] = useState<Zone[]>([])
@@ -37,10 +39,10 @@ export default function Overview() {
   const [selectedDma, setSelectedDma] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-const [chartLoading, setChartLoading] = useState(false)
+  const [chartLoading, setChartLoading] = useState(false)
   const [mpcStatus, setMpcStatus] = useState<MpcStatus | null>(null)
 
-  const hardwareDma = useMemo(() => {
+const hardwareDma = useMemo(() => {
     const exact = zones.find((z) => normalizeZoneId(z.id) === 'DMA08')
     if (exact) return exact
     return zones.find((z) => normalizeZoneId(z.id).includes('DMA08')) ?? null
@@ -57,6 +59,10 @@ const [chartLoading, setChartLoading] = useState(false)
   }, [hardwareDma])
 
   const hardwarePipeColor = hardwareDma ? (hardwarePipeColors[hardwareDma.status] ?? '#6B7280') : '#9CA3AF'
+
+  const handleRowClick = (nodeId: string) => {
+    navigate(`/control?node=${nodeId}`)
+  }
 
   const fetchZones = useCallback(async () => {
     try {
@@ -341,7 +347,8 @@ const [chartLoading, setChartLoading] = useState(false)
                   zones.map((zone) => (
                     <tr
                       key={zone.id}
-                      className="border-b border-rule/50 hover:bg-ink hover:text-paper transition-colors duration-150"
+                      className="border-b border-rule/50 hover:bg-ink hover:text-paper transition-colors duration-150 cursor-pointer"
+                      onClick={() => handleRowClick(zone.id)}
                     >
                       <td className="py-3">
                         <div className="font-mono text-[13px] font-bold">{zone.id}</div>

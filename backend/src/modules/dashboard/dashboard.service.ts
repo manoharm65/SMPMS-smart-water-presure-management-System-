@@ -9,10 +9,16 @@ import { existsSync, readFileSync } from 'fs';
 import { ZoneSummary, KpiData, AlertData, PressureHistory, PressureReading, ZoneDetail, AnomalyData } from './types.js';
 
 function toZoneId(nodeId: string): string {
+  if (nodeId.startsWith('valve_')) {
+    return 'VALVE-' + nodeId.replace('valve_', '');
+  }
   return nodeId.replace('DMA_', 'DMA-');
 }
 
 function fromZoneId(zoneId: string): string {
+  if (zoneId.startsWith('VALVE-')) {
+    return 'valve_' + zoneId.replace('VALVE-', '').toLowerCase();
+  }
   return zoneId.replace('DMA-', 'DMA_');
 }
 

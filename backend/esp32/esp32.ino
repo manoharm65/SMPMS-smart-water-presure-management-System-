@@ -7,11 +7,17 @@ const char* BACKEND_HOST  = "10.24.24.212";
 const int   BACKEND_PORT  = 3000;
 
 // ============================================================================
+// FEATURE FLAGS
+// ============================================================================
+#define ENABLE_FLOW_SENSOR  false   // Set to true if flow sensor is connected
+
+// ============================================================================
 // HARDWARE PINS
 // ============================================================================
 #define PRESSURE_SENSOR_PIN  36
 #define SERVO_CONTROL_PIN    14
 #define SERVO_FEEDBACK_PIN   35
+#define FLOW_SENSOR_PIN      34
 #define STATUS_LED_BLUE       2
 #define STATUS_LED_RED        4
 #define STATUS_LED_AMBER     33
@@ -147,9 +153,8 @@ void setup() {
 
     connectWiFi();
 
-    valveServo.attach(SERVO_CONTROL_PIN);
+    valveServo.attach(SERVO_CONTROL_PIN, 544, 2400);
     setServoPosition(50);
-
     // Always re-register on boot to get a fresh API key
     currentState = STATE_REGISTERING;
     Serial.println("[Setup] Going to REGISTER");
@@ -230,6 +235,34 @@ int readValvePosition() {
     int position = map(raw, 0, 4095, 0, 100);
     return constrain(position, 0, 100);
 }
+
+// ============================================================================
+// REAL SENSOR — FLOW (Optional)
+// Wiring: Flow sensor pulse output → GPIO 34
+// Returns flow rate in L/min (Hall effect sensor: 1 pulse per liter)
+// ============================================================================
+#if ENABLE_FLOW_SENSOR
+float readFlowSensor() {
+    static unsigned long lastPulseCount = 0;
+    static unsigned long lastReadTime = 0;
+    static uint32_t pulseCount = 0;
+
+    // Count pulses for 1 second
+    unsigned long now = millis();
+    if (now - lastReadTime >= 1000) {
+        // Simulate pulse counting (in real implementation, use interrupt)
+        // For YF-S201: 1 liter = ~450 pulses
+        float flowRate = (pulseCount / 450.0f) * 60.0f; // pulses/sec to L/min
+        lastReadTime = now;
+        pulseCount = 0;
+        return constrain(flowRate, 0.0f, 100.0f);
+    }
+
+    // Simulate some flow for demo
+    pulseCount = random(10, 50);
+    return 0.0f; // Return 0 during measurement period
+}
+#endif
 
 // ============================================================================
 // HELPERS
@@ -466,11 +499,18 @@ void sendTelemetry() {
     Serial.println("[Telemetry] P=" + String(pressure, 2) +
                    " bar | V=" + String(valvePos) + "%");
 
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<512> doc;
     doc["nodeId"]        = NODE_ID;
     doc["pressure"]      = roundf(pressure * 100.0f) / 100.0f;
     doc["valvePosition"] = valvePos;
     doc["timestamp"]     = isoTimestamp();
+
+    #if ENABLE_FLOW_SENSOR
+    float flowRate = readFlowSensor();
+    doc["flowSensor"]    = roundf(flowRate * 100.0f) / 100.0f;
+    Serial.println("[Telemetry] Flow=" + String(flowRate, 2) + " L/min");
+    #endif
+
     String payload;
     serializeJson(doc, payload);
 
@@ -486,7 +526,7 @@ void sendTelemetry() {
     if (code == 200 || code == 201) {
         String resp = http.getString();
         Serial.println("[Telemetry] OK - HTTP " + String(code));
-        
+
         // DEBUG: Print full raw response
         Serial.println("[DEBUG] ====== RAW RESPONSE START ======");
         Serial.println(resp);
@@ -495,29 +535,29 @@ void sendTelemetry() {
 
         StaticJsonDocument<512> rd;
         DeserializationError jsonErr = deserializeJson(rd, resp);
-        
+
         // DEBUG: JSON parsing status
         if (jsonErr) {
             Serial.println("[DEBUG] JSON parse FAILED: " + String(jsonErr.c_str()));
         } else {
             Serial.println("[DEBUG] JSON parse SUCCESS");
-            
+
             // DEBUG: Check what keys exist at root level
             Serial.print("[DEBUG] Root keys: ");
             for (JsonPair kv : rd.as<JsonObject>()) {
                 Serial.print(String(kv.key().c_str()) + ", ");
             }
             Serial.println();
-            
+
             // DEBUG: Check command object
             if (rd.containsKey("command")) {
                 Serial.println("[DEBUG] 'command' key EXISTS");
-                
+
                 if (rd["command"].isNull()) {
                     Serial.println("[DEBUG] 'command' value is NULL");
                 } else if (rd["command"].is<JsonObject>()) {
                     Serial.println("[DEBUG] 'command' is a JsonObject");
-                    
+
                     // Print all command fields
                     JsonObject cmdObj = rd["command"].as<JsonObject>();
                     Serial.print("[DEBUG] Command keys: ");
@@ -533,18 +573,18 @@ void sendTelemetry() {
                         Serial.print(", ");
                     }
                     Serial.println();
-                    
+
                     const char* cmdType = rd["command"]["type"]       | "";
                     int         cmdVal  = rd["command"]["value"]      | 0;
                     const char* cmdId   = rd["command"]["command_id"] | "";
-                    
-                    Serial.println("[DEBUG] Extracted: type=\"" + String(cmdType) + 
-                                   "\", value=" + String(cmdVal) + 
+
+                    Serial.println("[DEBUG] Extracted: type=\"" + String(cmdType) +
+                                   "\", value=" + String(cmdVal) +
                                    ", command_id=\"" + String(cmdId) + "\"");
-                    
+
                     Serial.println("[Command] Received: " + String(cmdType) +
                                    " -> " + String(cmdVal));
-                    
+
                     if (strcmp(cmdType, "SET_VALVE") == 0) {
                         Serial.println("[DEBUG] Executing SET_VALVE command...");
                         executeSetValve(cmdVal, cmdId);
