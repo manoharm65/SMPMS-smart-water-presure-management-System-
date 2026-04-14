@@ -334,13 +334,13 @@ const hardwareDma = useMemo(() => {
                 {loading ? (
                   <tr>
                     <td colSpan={6} className="py-8 text-center font-condensed text-[12px] text-dim">
-                      Loading zones...
+                      Fetching zone data...
                     </td>
                   </tr>
                 ) : zones.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-8 text-center font-condensed text-[12px] text-dim">
-                      No zones available
+                      No zones configured. Add DMA zones to begin monitoring.
                     </td>
                   </tr>
                 ) : (
@@ -405,7 +405,7 @@ const hardwareDma = useMemo(() => {
           <div className="h-[300px] relative">
             {chartLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-paper/80 z-10">
-                <span className="font-condensed text-[12px] text-dim">Loading chart...</span>
+                <span className="font-condensed text-[12px] text-dim">Loading chart data...</span>
               </div>
             )}
             <canvas ref={chartRef} />

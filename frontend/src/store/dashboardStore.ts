@@ -42,9 +42,22 @@ export type ZoneGeo = {
 
 export type MapMode = 'map' | 'dma'
 
+type DmaZoneLevel = 'High' | 'Medium-High' | 'Medium' | 'Low'
+
+export type DmaControlOption = {
+  id: string
+  elevation: number
+  zone: DmaZoneLevel
+  feedsInto: string[]
+}
+
+export type InspectorSection = 'maps' | 'properties' | null
+
 type DashboardState = {
   connection: SocketStatus
   mapMode: MapMode
+  inspectorSection: InspectorSection
+  selectedHardwareDmaId: string
   selectedDmaId: string | null
   hardwareModeEnabled: boolean
   activeHardwareDmaId: string | null
@@ -58,6 +71,8 @@ type DashboardState = {
 
   setConnection: (status: SocketStatus) => void
   setMapMode: (mode: MapMode) => void
+  setInspectorSection: (section: InspectorSection) => void
+  setSelectedHardwareDmaId: (dmaId: string) => void
   selectDma: (dmaId: string | null) => void
   setHardwareModeEnabled: (enabled: boolean) => void
   setActiveHardwareDma: (dmaId: string | null) => void
@@ -88,6 +103,8 @@ function statusFromTelemetry(evt: PressureUpdateEvent): PressureStatus {
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   connection: { status: 'offline' },
   mapMode: 'map',
+  inspectorSection: 'maps',
+  selectedHardwareDmaId: 'DMA-01',
   selectedDmaId: null,
   hardwareModeEnabled: false,
   activeHardwareDmaId: null,
@@ -101,6 +118,11 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
 
   setConnection: (status) => set({ connection: status }),
   setMapMode: (mode) => set({ mapMode: mode }),
+  setInspectorSection: (section) =>
+    set((state) => ({
+      inspectorSection: state.inspectorSection === section ? null : section,
+    })),
+  setSelectedHardwareDmaId: (dmaId) => set({ selectedHardwareDmaId: dmaId }),
   selectDma: (dmaId) =>
     set({
       selectedDmaId: dmaId,

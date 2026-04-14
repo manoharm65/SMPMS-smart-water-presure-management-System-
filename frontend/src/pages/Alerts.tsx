@@ -202,7 +202,7 @@ export default function Alerts() {
                       onClick={() => handleAcknowledge(alert)}
                       className="px-4 py-2 bg-ink text-paper font-condensed text-sm font-semibold uppercase tracking-wider hover:opacity-90 transition-opacity"
                     >
-                      Resolve
+                      Mark Resolved
                     </button>
                     <button
                       onClick={() => setSelectedZone({ zoneId: alert.zone_id, name: alert.zone_name })}
@@ -226,7 +226,7 @@ export default function Alerts() {
           {selectedZone ? (
             <>
               <div className="mb-1 font-condensed text-[10px] uppercase tracking-wider text-dim">
-                Selected Zone
+                Controlling Valve For
               </div>
               <div className="font-syne font-bold text-[22px] text-ink mb-4">
                 {selectedZone.name}
@@ -318,10 +318,10 @@ export default function Alerts() {
           ) : (
             <div className="text-center py-12">
               <div className="font-condensed text-[13px] text-dim uppercase tracking-wider mb-2">
-                No zone selected
+                Select an alert
               </div>
               <p className="font-condensed text-[12px] text-dim">
-                Click "Valve Control" on any alert to control that zone's valve directly from here.
+                Click "Valve Control" on any alert to adjust that zone's valve position.
               </p>
             </div>
           )}

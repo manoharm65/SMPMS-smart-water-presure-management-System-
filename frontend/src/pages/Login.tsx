@@ -91,10 +91,10 @@ export default function Login() {
             {disabled
               ? mode === 'login'
                 ? 'Signing in...'
-                : 'Creating account...'
+                : 'Creating your account...'
               : mode === 'login'
-                ? 'Login'
-                : 'Register'}
+                ? 'Sign In'
+                : 'Create Account'}
           </button>
         </form>
 

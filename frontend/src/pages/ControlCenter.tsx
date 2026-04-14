@@ -119,17 +119,17 @@ export default function ControlCenter() {
             <h2 className="font-syne font-bold text-[18px] text-ink">
               MANUAL CONTROL
             </h2>
-            <button
-              onClick={toggleMode}
-              disabled={loading}
-              className={`px-4 py-2 font-condensed text-[11px] uppercase tracking-wider border transition-colors ${
-                controlMode === 'manual'
-                  ? 'bg-signal text-paper border-signal'
-                  : 'bg-paper text-ink border-rule hover:bg-rule/30'
-              }`}
-            >
-              Switch to {controlMode === 'auto' ? 'Manual' : 'Auto'}
-            </button>
+              <button
+                onClick={toggleMode}
+                disabled={loading}
+                className={`px-4 py-2 font-condensed text-[11px] uppercase tracking-wider border transition-colors ${
+                  controlMode === 'manual'
+                    ? 'bg-signal text-paper border-signal'
+                    : 'bg-paper text-ink border-rule hover:bg-rule/30'
+                }`}
+              >
+                Switch to {controlMode === 'auto' ? 'Manual' : 'Auto'} Control
+              </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -307,7 +307,7 @@ export default function ControlCenter() {
               Confirm Emergency Override
             </h3>
             <p className="font-condensed text-[12px] text-dim mb-4">
-              This will close all valves and switch to manual mode. This action cannot be undone.
+              This will immediately close all valves and switch to manual control. The system will not automatically regulate pressure until you switch back to auto mode.
             </p>
             <div className="flex gap-2">
               <button

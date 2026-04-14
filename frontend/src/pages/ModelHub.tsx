@@ -1,24 +1,29 @@
-import { useEffect, useState } from 'react'
-import { useModelHubStore, type ModelHubTab } from '../store/modelHubStore'
-import { useModelHubPolling } from '../hooks/useModelPolling'
-import { SCENARIOS, type Scenario } from '../config/scenarios'
-import ModelTab from '../components/model-hub/ModelTab'
-import PressureComparisonChart from '../components/model-hub/charts/PressureComparisonChart'
+import { useEffect, useState } from "react";
+import { useModelHubStore, type ModelHubTab } from "../store/modelHubStore";
+import { useModelHubPolling } from "../hooks/useModelPolling";
+import { SCENARIOS, type Scenario } from "../config/scenarios";
+import ModelTab from "../components/model-hub/ModelTab";
+import PressureComparisonChart from "../components/model-hub/charts/PressureComparisonChart";
+import FlowSimulation from "../components/model-hub/FlowSimulation";
 
-const TAB_CONFIG: Record<ModelHubTab, { title: string; description: string }> = {
-  mpc: {
-    title: 'Model Predictive Control',
-    description: 'Real-time optimization of pressure setpoints across network nodes',
-  },
-  leak: {
-    title: 'Leak Detection',
-    description: 'Anomaly detection and localization of potential leak events',
-  },
-  iweds: {
-    title: 'IWEDS State',
-    description: 'Intelligent Water Event Detection System monitoring and recommendations',
-  },
-}
+const TAB_CONFIG: Record<ModelHubTab, { title: string; description: string }> =
+  {
+    mpc: {
+      title: "Model Predictive Control",
+      description:
+        "Real-time optimization of pressure setpoints across network nodes",
+    },
+    leak: {
+      title: "Leak Detection",
+      description:
+        "Anomaly detection and localization of potential leak events",
+    },
+    iweds: {
+      title: "IWEDS State",
+      description:
+        "Intelligent Water Event Detection System monitoring and recommendations",
+    },
+  };
 
 export default function ModelHub() {
   const {
@@ -41,38 +46,41 @@ export default function ModelHub() {
     runMpcSimulation,
     setLeakSimulation,
     runLeakSimulation,
-  } = useModelHubStore()
+  } = useModelHubStore();
 
-  const [showScenarioModal, setShowScenarioModal] = useState(false)
+  const [showScenarioModal, setShowScenarioModal] = useState(false);
 
-  useModelHubPolling(30000)
+  useModelHubPolling(30000);
 
   useEffect(() => {
-    useModelHubStore.getState().refreshAll()
-  }, [])
+    useModelHubStore.getState().refreshAll();
+  }, []);
 
   const handleScenarioSelect = async (scenario: Scenario) => {
-    await startScenario(scenario)
-    setShowScenarioModal(false)
-  }
+    await startScenario(scenario);
+    setShowScenarioModal(false);
+  };
 
-  const tabs: ModelHubTab[] = ['mpc', 'leak', 'iweds']
+  const tabs: ModelHubTab[] = ["mpc", "leak", "iweds"];
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'mpc':
+      case "mpc":
         return (
           <ModelTab
             title={TAB_CONFIG.mpc.title}
             description={TAB_CONFIG.mpc.description}
             stats={
               <div className="grid grid-cols-2 gap-6 mb-4">
-                {['valve_1', 'valve_2'].map((nodeId) => {
-                  const node = mpcNodeData[nodeId]
+                {["valve_1", "valve_2"].map((nodeId) => {
+                  const node = mpcNodeData[nodeId];
                   return (
-                    <div key={nodeId} className="border-2 border-rule p-4 rounded bg-paper">
+                    <div
+                      key={nodeId}
+                      className="border-2 border-rule p-4 rounded bg-paper"
+                    >
                       <div className="font-condensed text-[12px] uppercase tracking-wider text-dim mb-2">
-                        {nodeId.replace('_', ' ').toUpperCase()}
+                        {nodeId.replace("_", " ").toUpperCase()}
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -80,19 +88,25 @@ export default function ModelHub() {
                             Pressure
                           </div>
                           <div className="font-mono text-[32px] text-ink">
-                            {node ? node.pressure.toFixed(1) : '-.-'}
+                            {node ? node.pressure.toFixed(1) : "-.-"}
                           </div>
-                          <div className="font-condensed text-[10px] text-dim">BAR</div>
+                          <div className="font-condensed text-[10px] text-dim">
+                            BAR
+                          </div>
                         </div>
                         <div>
                           <div className="font-condensed text-[10px] uppercase tracking-wider text-dim">
                             Status
                           </div>
-                          <div className={`font-mono text-[24px] ${node?.status === 'live' ? 'text-pass' : 'text-signal'}`}>
-                            {node?.status === 'live' ? 'LIVE' : 'OFFLINE'}
+                          <div
+                            className={`font-mono text-[24px] ${node?.status === "live" ? "text-pass" : "text-signal"}`}
+                          >
+                            {node?.status === "live" ? "LIVE" : "OFFLINE"}
                           </div>
                           <div className="font-condensed text-[10px] text-dim">
-                            {node?.status === 'live' ? 'Water Flowing' : 'No Flow'}
+                            {node?.status === "live"
+                              ? "Water Flowing"
+                              : "No Flow"}
                           </div>
                         </div>
                       </div>
@@ -105,12 +119,14 @@ export default function ModelHub() {
                             <span className="font-mono text-[20px] text-ink">
                               {node.flow_sensor.toFixed(1)}
                             </span>
-                            <span className="font-condensed text-[10px] text-dim">L/min</span>
+                            <span className="font-condensed text-[10px] text-dim">
+                              L/min
+                            </span>
                           </div>
                         </div>
                       )}
                     </div>
-                  )
+                  );
                 })}
               </div>
             }
@@ -119,8 +135,8 @@ export default function ModelHub() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      setMpcSimulation(20, 0)
-                      window.alert('Valve 1: 20%, Valve 2: 0%')
+                      setMpcSimulation(20, 0);
+                      window.alert("Valve 1: 20%, Valve 2: 0%");
                     }}
                     className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors"
                   >
@@ -131,7 +147,7 @@ export default function ModelHub() {
                     disabled={runningScenario}
                     className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors disabled:opacity-50"
                   >
-                    {runningScenario ? 'Running...' : 'RUN'}
+                    {runningScenario ? "Running..." : "RUN"}
                   </button>
                 </div>
               ) : (
@@ -140,7 +156,7 @@ export default function ModelHub() {
                   disabled={runningScenario}
                   className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors disabled:opacity-50"
                 >
-                  {runningScenario ? 'Running...' : 'Run Scenario'}
+                  {runningScenario ? "Running..." : "Run Scenario"}
                 </button>
               )
             }
@@ -151,9 +167,9 @@ export default function ModelHub() {
               </div>
             </div>
           </ModelTab>
-        )
+        );
 
-      case 'leak':
+      case "leak":
         return (
           <ModelTab
             title={TAB_CONFIG.leak.title}
@@ -165,12 +181,14 @@ export default function ModelHub() {
                     Valve 1 Pressure
                   </div>
                   <div className="font-mono text-[28px] text-ink">
-                    {mpcNodeData.valve_1?.pressure.toFixed(1) ?? '-.-'}
+                    {mpcNodeData.valve_1?.pressure.toFixed(1) ?? "-.-"}
                   </div>
                   <div className="font-condensed text-[10px] text-dim">BAR</div>
                   {mpcNodeData.valve_1?.flow_sensor !== undefined && (
                     <div className="mt-1 pt-1 border-t border-rule/50">
-                      <div className="font-condensed text-[9px] text-dim">Flow: {mpcNodeData.valve_1.flow_sensor.toFixed(1)} L/min</div>
+                      <div className="font-condensed text-[9px] text-dim">
+                        Flow: {mpcNodeData.valve_1.flow_sensor.toFixed(1)} L/min
+                      </div>
                     </div>
                   )}
                 </div>
@@ -179,12 +197,14 @@ export default function ModelHub() {
                     Valve 2 Pressure
                   </div>
                   <div className="font-mono text-[28px] text-ink">
-                    {mpcNodeData.valve_2?.pressure.toFixed(1) ?? '-.-'}
+                    {mpcNodeData.valve_2?.pressure.toFixed(1) ?? "-.-"}
                   </div>
                   <div className="font-condensed text-[10px] text-dim">BAR</div>
                   {mpcNodeData.valve_2?.flow_sensor !== undefined && (
                     <div className="mt-1 pt-1 border-t border-rule/50">
-                      <div className="font-condensed text-[9px] text-dim">Flow: {mpcNodeData.valve_2.flow_sensor.toFixed(1)} L/min</div>
+                      <div className="font-condensed text-[9px] text-dim">
+                        Flow: {mpcNodeData.valve_2.flow_sensor.toFixed(1)} L/min
+                      </div>
                     </div>
                   )}
                 </div>
@@ -194,8 +214,11 @@ export default function ModelHub() {
                   </div>
                   <div className="font-mono text-[28px] text-ink">
                     {mpcNodeData.valve_1 && mpcNodeData.valve_2
-                      ? (mpcNodeData.valve_1.pressure - mpcNodeData.valve_2.pressure).toFixed(1)
-                      : '-'}
+                      ? (
+                          mpcNodeData.valve_1.pressure -
+                          mpcNodeData.valve_2.pressure
+                        ).toFixed(1)
+                      : "-"}
                   </div>
                   <div className="font-condensed text-[10px] text-dim">BAR</div>
                 </div>
@@ -206,8 +229,8 @@ export default function ModelHub() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      setLeakSimulation(50, 10)
-                      window.alert('Valve 1: 50%, Valve 2: 10%')
+                      setLeakSimulation(50, 10);
+                      window.alert("Valve 1: 50%, Valve 2: 10%");
                     }}
                     className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors"
                   >
@@ -218,7 +241,7 @@ export default function ModelHub() {
                     disabled={runningScenario}
                     className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors disabled:opacity-50"
                   >
-                    {runningScenario ? 'Running...' : 'RUN'}
+                    {runningScenario ? "Running..." : "RUN"}
                   </button>
                 </div>
               ) : (
@@ -227,22 +250,22 @@ export default function ModelHub() {
                   disabled={runningScenario}
                   className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors disabled:opacity-50"
                 >
-                  {runningScenario ? 'Running...' : 'Run Scenario'}
+                  {runningScenario ? "Running..." : "Run Scenario"}
                 </button>
               )
             }
           >
             <div className="p-4 h-full">
-              <PressureComparisonChart 
-                valve1={mpcNodeData.valve_1 ?? null} 
+              <PressureComparisonChart
+                valve1={mpcNodeData.valve_1 ?? null}
                 valve2={mpcNodeData.valve_2 ?? null}
-                loading={loading} 
+                loading={loading}
               />
             </div>
           </ModelTab>
-        )
+        );
 
-      case 'iweds':
+      case "iweds":
         return (
           <ModelTab
             title={TAB_CONFIG.iweds.title}
@@ -255,14 +278,20 @@ export default function ModelHub() {
                   </div>
                   <div className="flex items-baseline gap-2">
                     <span className="font-mono text-[48px] text-ink">
-                      {iwedsNodeData.valve_1?.pressure.toFixed(1) ?? '-.-'}
+                      {iwedsNodeData.valve_1?.pressure.toFixed(1) ?? "-.-"}
                     </span>
-                    <span className="font-condensed text-[14px] text-dim">BAR</span>
+                    <span className="font-condensed text-[14px] text-dim">
+                      BAR
+                    </span>
                   </div>
                   <div className="mt-2 flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${iwedsNodeData.valve_1?.status === 'live' ? 'bg-pass' : 'bg-signal'}`} />
+                    <span
+                      className={`w-2 h-2 rounded-full ${iwedsNodeData.valve_1?.status === "live" ? "bg-pass" : "bg-signal"}`}
+                    />
                     <span className="font-condensed text-[10px] text-dim">
-                      {iwedsNodeData.valve_1?.status === 'live' ? 'LIVE' : 'OFFLINE'}
+                      {iwedsNodeData.valve_1?.status === "live"
+                        ? "LIVE"
+                        : "OFFLINE"}
                     </span>
                   </div>
                   {iwedsNodeData.valve_1?.flow_sensor !== undefined && (
@@ -274,7 +303,9 @@ export default function ModelHub() {
                         <span className="font-mono text-[24px] text-ink">
                           {iwedsNodeData.valve_1.flow_sensor.toFixed(1)}
                         </span>
-                        <span className="font-condensed text-[12px] text-dim">L/min</span>
+                        <span className="font-condensed text-[12px] text-dim">
+                          L/min
+                        </span>
                       </div>
                     </div>
                   )}
@@ -288,10 +319,13 @@ export default function ModelHub() {
                     <span className="font-mono text-[48px] text-ink">
                       {iwedsNodeData.expected_flow_rate}
                     </span>
-                    <span className="font-condensed text-[14px] text-dim">L/min</span>
+                    <span className="font-condensed text-[14px] text-dim">
+                      L/min
+                    </span>
                   </div>
                   <div className="mt-2 font-condensed text-[10px] text-dim">
-                    Calculated at {iwedsNodeData.valve_1?.pressure.toFixed(1) ?? '-'} BAR
+                    Calculated at{" "}
+                    {iwedsNodeData.valve_1?.pressure.toFixed(1) ?? "-"} BAR
                   </div>
                 </div>
               </div>
@@ -299,137 +333,47 @@ export default function ModelHub() {
             actions={
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => toggleMotorized(!iwedsNodeData.motorized_flow?.enabled)}
+                  onClick={() =>
+                    toggleMotorized(!iwedsNodeData.motorized_flow?.enabled)
+                  }
                   disabled={runningScenario}
                   className={`px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border transition-colors ${
                     iwedsNodeData.motorized_flow?.enabled
-                      ? 'bg-pass text-paper border-pass'
-                      : 'bg-paper text-ink border-rule hover:bg-ink hover:text-paper'
+                      ? "bg-pass text-paper border-pass"
+                      : "bg-paper text-ink border-rule hover:bg-ink hover:text-paper"
                   } disabled:opacity-50`}
                 >
-                  {iwedsNodeData.motorized_flow?.enabled ? 'Motor ON' : 'Motorized Flow'}
+                  {iwedsNodeData.motorized_flow?.enabled
+                    ? "Motor ON"
+                    : "Motorized Flow"}
                 </button>
                 <button
                   onClick={() => setShowScenarioModal(true)}
                   disabled={runningScenario}
                   className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors disabled:opacity-50"
                 >
-                  {runningScenario ? 'Running...' : 'Run Scenario'}
+                  {runningScenario ? "Running..." : "Run Scenario"}
                 </button>
               </div>
             }
           >
-            <div className="p-4 h-full">
-              <div className="border border-rule p-4 rounded bg-paper">
-                <h3 className="font-condensed text-[12px] uppercase tracking-wider text-dim mb-4">
-                  Smart Meter Section
-                </h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <div className="font-condensed text-[10px] uppercase tracking-wider text-dim">
-                      Actual Flow
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="font-mono text-[32px] text-ink">
-                        {iwedsNodeData.smart_meter?.actual_flow ?? '-'}
-                      </span>
-                      <span className="font-condensed text-[12px] text-dim">L/min</span>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="font-condensed text-[10px] uppercase tracking-wider text-dim">
-                      Cumulative Volume
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="font-mono text-[32px] text-ink">
-                        {iwedsNodeData.smart_meter?.cumulative_volume ?? '-'}
-                      </span>
-                      <span className="font-condensed text-[12px] text-dim">L</span>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="font-condensed text-[10px] uppercase tracking-wider text-dim">
-                      Signal
-                    </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="font-mono text-[32px] text-ink">
-                        {iwedsNodeData.smart_meter?.signal_strength ?? '-'}
-                      </span>
-                      <span className="font-condensed text-[12px] text-dim">%</span>
-                    </div>
-                    <div className={`font-condensed text-[10px] ${
-                      iwedsNodeData.smart_meter?.battery_status === 'ok' ? 'text-pass' : 
-                      iwedsNodeData.smart_meter?.battery_status === 'low' ? 'text-warn' : 'text-signal'
-                    }`}>
-                      Battery: {iwedsNodeData.smart_meter?.battery_status?.toUpperCase() ?? 'N/A'}
-                    </div>
-                  </div>
-                </div>
-
-                {iwedsNodeData.motorized_flow && (
-                  <div className="mt-4 pt-4 border-t border-rule">
-                    <h3 className="font-condensed text-[12px] uppercase tracking-wider text-dim mb-3">
-                      Motorized Flow Result
-                    </h3>
-                    <div className="grid grid-cols-4 gap-4">
-                      <div>
-                        <div className="font-condensed text-[10px] uppercase tracking-wider text-dim">
-                          Base Flow
-                        </div>
-                        <div className="flex items-baseline gap-1">
-                          <span className="font-mono text-[24px] text-dim">
-                            {iwedsNodeData.motorized_flow.base_flow}
-                          </span>
-                          <span className="font-condensed text-[10px] text-dim">L/min</span>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-condensed text-[10px] uppercase tracking-wider text-dim">
-                          Motor Added
-                        </div>
-                        <div className="flex items-baseline gap-1">
-                          <span className="font-mono text-[24px] text-pass">
-                            +{iwedsNodeData.motorized_flow.motorized_flow}
-                          </span>
-                          <span className="font-condensed text-[10px] text-dim">L/min</span>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-condensed text-[10px] uppercase tracking-wider text-dim">
-                          Total Flow
-                        </div>
-                        <div className="flex items-baseline gap-1">
-                          <span className="font-mono text-[24px] text-ink font-bold">
-                            {iwedsNodeData.motorized_flow.total_flow}
-                          </span>
-                          <span className="font-condensed text-[10px] text-dim">L/min</span>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-condensed text-[10px] uppercase tracking-wider text-dim">
-                          Increase
-                        </div>
-                        <div className="flex items-baseline gap-1">
-                          <span className="font-mono text-[24px] text-pass">
-                            +{iwedsNodeData.motorized_flow.estimated_increase_percent}%
-                          </span>
-                        </div>
-                        <div className="font-condensed text-[10px] text-dim">
-                          {iwedsNodeData.motorized_flow.pump_power_watts}W pump
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/*<div className="p-4 h-full">*/}
+            <FlowSimulation
+              mainFlow={
+                iwedsNodeData.valve_1?.pressure
+                  ? iwedsNodeData.valve_1.pressure * 2
+                  : 100
+              }
+              className="w-full"
+            />
+            {/*</div>*/}
           </ModelTab>
-        )
+        );
 
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
     <div className="bg-paper min-h-screen">
@@ -450,9 +394,11 @@ export default function ModelHub() {
             </div>
             {modelStatus && (
               <div className="flex items-center gap-2 px-3 py-1 border border-rule rounded-full bg-paper">
-                <span className={`w-2 h-2 rounded-full ${modelStatus.mpc.running ? 'bg-pass' : 'bg-[#E8001D]'}`} />
+                <span
+                  className={`w-2 h-2 rounded-full ${modelStatus.mpc.running ? "bg-pass" : "bg-[#E8001D]"}`}
+                />
                 <span className="font-condensed text-[10px] uppercase tracking-wider text-ink">
-                  MPC {modelStatus.mpc.running ? 'Active' : 'Offline'}
+                  MPC {modelStatus.mpc.running ? "Active" : "Offline"}
                 </span>
               </div>
             )}
@@ -468,8 +414,8 @@ export default function ModelHub() {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 font-condensed text-[11px] uppercase tracking-wider border border-rule transition-colors ${
                 activeTab === tab
-                  ? 'bg-ink text-paper border-ink'
-                  : 'bg-paper text-ink hover:bg-rule/30'
+                  ? "bg-ink text-paper border-ink"
+                  : "bg-paper text-ink hover:bg-rule/30"
               }`}
             >
               {TAB_CONFIG[tab].title}
@@ -478,15 +424,15 @@ export default function ModelHub() {
         </div>
       </div>
 
-      <div className="p-5 h-[calc(100vh-180px)]">
-        {renderTabContent()}
-      </div>
+      <div className="p-5 h-[calc(100vh-180px)]">{renderTabContent()}</div>
 
       {showScenarioModal && (
         <div className="fixed inset-0 bg-ink/80 flex items-center justify-center z-50">
           <div className="bg-paper border-2 border-rule p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-syne font-bold text-[18px] text-ink">Select Scenario</h3>
+              <h3 className="font-syne font-bold text-[18px] text-ink">
+                Select Scenario
+              </h3>
               <button
                 onClick={() => setShowScenarioModal(false)}
                 className="text-dim hover:text-ink text-[20px]"
@@ -502,10 +448,15 @@ export default function ModelHub() {
                   onClick={() => handleScenarioSelect(scenario)}
                   className="w-full text-left p-3 border border-rule hover:border-ink transition-colors"
                 >
-                  <div className="font-mono text-[14px] text-ink">{scenario.name}</div>
-                  <div className="font-condensed text-[11px] text-dim mt-1">{scenario.description}</div>
+                  <div className="font-mono text-[14px] text-ink">
+                    {scenario.name}
+                  </div>
+                  <div className="font-condensed text-[11px] text-dim mt-1">
+                    {scenario.description}
+                  </div>
                   <div className="font-mono text-[10px] text-dim mt-2">
-                    Type: {scenario.type} · Duration: {scenario.duration_seconds}s
+                    Type: {scenario.type} · Duration:{" "}
+                    {scenario.duration_seconds}s
                   </div>
                 </button>
               ))}
@@ -523,5 +474,5 @@ export default function ModelHub() {
         </div>
       )}
     </div>
-  )
+  );
 }
