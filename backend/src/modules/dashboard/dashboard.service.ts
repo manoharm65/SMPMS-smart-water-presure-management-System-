@@ -148,6 +148,77 @@ function readMlPredictionsForNode(nodeId: string): MlPredictionRecord[] {
 }
 
 export class DashboardService {
+  private motorizedFlowEnabled = false;
+
+  getNodesTelemetry(nodeIds: string[]) {
+    const ids = nodeIds
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+
+    const mapStatus = (status?: string): 'live' | 'offline' | 'error' => {
+      if (status === 'online') return 'live';
+      if (status === 'degraded') return 'error';
+      return 'offline';
+    };
+
+    return ids.map((nodeId) => {
+      const node = nodeRepository.findByNodeId(nodeId);
+      const latestTelemetry = telemetryRepository.findLatestByNodeId(nodeId, 1)[0];
+
+      const pressure = latestTelemetry?.pressure ?? 0;
+      const flowRate = latestTelemetry?.flowRate;
+      const valvePosition =
+        latestTelemetry?.valvePosition ?? node?.currentPosition ?? node?.valvePosition ?? 0;
+
+      return {
+        node_id: nodeId,
+        pressure,
+        flow_rate: flowRate,
+        flow_sensor: flowRate,
+        valve_position: valvePosition,
+        status: mapStatus(node?.status),
+        last_update: latestTelemetry?.timestamp ?? node?.lastSeen ?? new Date(0).toISOString(),
+      };
+    });
+  }
+
+  getSmartMeters(meterIds: string[]) {
+    const ids = meterIds
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+
+    const houseTelemetry = telemetryRepository.findLatestByNodeId('house_1', 1)[0];
+    const baseFlow = houseTelemetry?.flowRate ?? 0;
+    const actualFlow = this.motorizedFlowEnabled ? baseFlow * 1.35 : baseFlow;
+
+    return ids.map((meterId) => ({
+      meter_id: meterId,
+      actual_flow: Math.round(actualFlow * 100) / 100,
+      cumulative_volume: Math.round(actualFlow * 100),
+      last_update: houseTelemetry?.timestamp ?? new Date().toISOString(),
+      battery_status: 'ok' as const,
+      signal_strength: 85,
+    }));
+  }
+
+  toggleMotorizedFlow(enabled: boolean) {
+    this.motorizedFlowEnabled = enabled;
+
+    const houseTelemetry = telemetryRepository.findLatestByNodeId('house_1', 1)[0];
+    const baseFlow = Math.round((houseTelemetry?.flowRate ?? 0) * 100) / 100;
+    const boosted = Math.round(baseFlow * 1.35 * 100) / 100;
+
+    return {
+      enabled,
+      base_flow: baseFlow,
+      motorized_flow: enabled ? boosted : 0,
+      total_flow: enabled ? boosted : baseFlow,
+      pump_power_watts: enabled ? 750 : 0,
+      estimated_increase_percent: enabled ? 35 : 0,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   getZones(): ZoneSummary[] {
     const nodes = nodeRepository.findAll();
     const zones: ZoneSummary[] = [];

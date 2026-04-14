@@ -5,11 +5,11 @@ import { z } from 'zod';
  * More precise than class-validator for external/untrusted input.
  */
 
-// valve_ followed by numeric suffix, e.g. valve_1
-const VALVE_ID_PATTERN = /^valve_[0-9]{1,20}$/;
+// valve_ or house_ followed by numeric suffix, e.g. valve_1, house_1
+const NODE_ID_PATTERN = /^(valve|house)_[0-9]{1,20}$/;
 
 export const CreateEspTelemetrySchema = z.object({
-  nodeId: z.string().regex(VALVE_ID_PATTERN, 'nodeId must match valve_X format (e.g., valve_1)'),
+  nodeId: z.string().regex(NODE_ID_PATTERN, 'nodeId must match valve_X or house_X format (e.g., valve_1, house_1)'),
   pressure: z.number().min(0, 'Pressure cannot be negative').max(20, 'Pressure cannot exceed 20 BAR'),
   valvePosition: z
     .number()
@@ -20,7 +20,7 @@ export const CreateEspTelemetrySchema = z.object({
 });
 
 export const SyncTelemetrySchema = z.object({
-  nodeId: z.string().regex(VALVE_ID_PATTERN, 'nodeId must match valve_X format (e.g., valve_1)'),
+  nodeId: z.string().regex(NODE_ID_PATTERN, 'nodeId must match valve_X or house_X format (e.g., valve_1, house_1)'),
   readings: z
     .array(
       z.object({
@@ -34,7 +34,7 @@ export const SyncTelemetrySchema = z.object({
 });
 
 export const RegisterEspSchema = z.object({
-  nodeId: z.string().regex(VALVE_ID_PATTERN, 'nodeId must match valve_X format (e.g., valve_1)'),
+  nodeId: z.string().regex(NODE_ID_PATTERN, 'nodeId must match valve_X or house_X format (e.g., valve_1, house_1)'),
   firmwareVersion: z.string().min(1, 'Firmware version is required'),
   ipAddress: z.ipv4(),
 });

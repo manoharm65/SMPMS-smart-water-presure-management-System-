@@ -9,6 +9,62 @@ import {
 
 const router = Router();
 
+// GET /api/v1/dashboard/nodes/telemetry?ids=valve_1,valve_2,house_1
+router.get('/nodes/telemetry', (req: Request, res: Response) => {
+  try {
+    const idsParam = String(req.query.ids ?? '');
+    const ids = idsParam
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+
+    if (ids.length === 0) {
+      res.status(400).json({ error: 'Query parameter ids is required' });
+      return;
+    }
+
+    const telemetry = dashboardService.getNodesTelemetry(ids);
+    res.json(telemetry);
+  } catch (err) {
+    console.error('[Dashboard] Error getting node telemetry:', err);
+    res.status(500).json({ error: 'Failed to get node telemetry' });
+  }
+});
+
+// GET /api/v1/dashboard/smart-meters?ids=meter_1
+router.get('/smart-meters', (req: Request, res: Response) => {
+  try {
+    const idsParam = String(req.query.ids ?? '');
+    const ids = idsParam
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+
+    if (ids.length === 0) {
+      res.status(400).json({ error: 'Query parameter ids is required' });
+      return;
+    }
+
+    const data = dashboardService.getSmartMeters(ids);
+    res.json(data);
+  } catch (err) {
+    console.error('[Dashboard] Error getting smart meter data:', err);
+    res.status(500).json({ error: 'Failed to get smart meter data' });
+  }
+});
+
+// POST /api/v1/dashboard/motorized-flow
+router.post('/motorized-flow', (req: Request, res: Response) => {
+  try {
+    const enabled = Boolean(req.body?.enabled);
+    const result = dashboardService.toggleMotorizedFlow(enabled);
+    res.json(result);
+  } catch (err) {
+    console.error('[Dashboard] Error toggling motorized flow:', err);
+    res.status(500).json({ error: 'Failed to toggle motorized flow' });
+  }
+});
+
 // GET /api/v1/dashboard/zones
 router.get('/zones', (_req: Request, res: Response) => {
   try {

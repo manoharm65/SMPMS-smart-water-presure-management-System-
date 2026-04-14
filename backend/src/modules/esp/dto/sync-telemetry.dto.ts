@@ -18,7 +18,7 @@ export class SyncReadingDto {
 
 export class SyncTelemetryDto {
   @IsString()
-  @Matches(/^valve_[0-9]{1,20}$/, { message: 'nodeId must match valve_X format (e.g., valve_1)' })
+  @Matches(/^(valve|house)_[0-9]{1,20}$/, { message: 'nodeId must match valve_X or house_X format (e.g., valve_1, house_1)' })
   nodeId!: string;
 
   @IsArray()

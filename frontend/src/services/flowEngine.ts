@@ -98,7 +98,7 @@ function splitFlow(
  * Create mock flow readings for development mode
  * @internal - used in development mode
  */
-function generateMockReadings(config: FlowConfig): FlowReadings {
+export function generateMockReadings(config: FlowConfig): FlowReadings {
   const baseFlow = 80 + Math.random() * 40
   const { branchA, branchB } = splitFlow(
     baseFlow,

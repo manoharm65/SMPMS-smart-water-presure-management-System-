@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useModelHubStore, type ModelHubTab } from "../store/modelHubStore";
-import { useModelHubPolling } from "../hooks/useModelPolling";
+import { useModelHubPolling, useTelemetryPolling } from "../hooks/useModelPolling";
 import { SCENARIOS, type Scenario } from "../config/scenarios";
 import ModelTab from "../components/model-hub/ModelTab";
 import PressureComparisonChart from "../components/model-hub/charts/PressureComparisonChart";
@@ -38,10 +38,6 @@ export default function ModelHub() {
     loading,
     error,
     controlSimulationEnabled,
-    mpcSimulationValve1,
-    mpcSimulationValve2,
-    leakSimulationValve1,
-    leakSimulationValve2,
     setMpcSimulation,
     runMpcSimulation,
     setLeakSimulation,
@@ -51,10 +47,17 @@ export default function ModelHub() {
   const [showScenarioModal, setShowScenarioModal] = useState(false);
 
   useModelHubPolling(30000);
+  useTelemetryPolling(1000);
 
   useEffect(() => {
     useModelHubStore.getState().refreshAll();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "iweds") {
+      useModelHubStore.getState().fetchIwedsNodeData();
+    }
+  }, [activeTab]);
 
   const handleScenarioSelect = async (scenario: Scenario) => {
     await startScenario(scenario);
@@ -364,6 +367,14 @@ export default function ModelHub() {
                   ? iwedsNodeData.valve_1.pressure * 2
                   : 100
               }
+              houseMeterFlow={
+                iwedsNodeData.house_1?.flow_sensor ??
+                iwedsNodeData.house_1?.flow_rate ??
+                iwedsNodeData.smart_meter?.actual_flow ??
+                0
+              }
+              houseMeterStatus={iwedsNodeData.house_1?.status}
+              expectedFlow={iwedsNodeData.expected_flow_rate}
               className="w-full"
             />
             {/*</div>*/}

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { flowEngine, type FlowReadings } from "../../services/flowEngine";
-import { getNodeTelemetry } from "../../services/api";
 
 interface FlowSimulationProps {
   mainFlow?: number;
+  houseMeterFlow?: number;
+  houseMeterStatus?: "live" | "offline" | "error";
+  expectedFlow?: number;
   className?: string;
 }
 
@@ -58,6 +60,9 @@ function ExpandModal({
 
 export default function FlowSimulation({
   mainFlow = 100,
+  houseMeterFlow = 0,
+  houseMeterStatus,
+  expectedFlow,
   className = "",
 }: FlowSimulationProps) {
   const [readings, setReadings] = useState<FlowReadings>({
@@ -67,9 +72,20 @@ export default function FlowSimulation({
     timestamp: Date.now(),
   });
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeMotor, setActiveMotor] = useState<"motor1" | "motor2" | null>(null);
-  const [houseMeterValue, setHouseMeterValue] = useState<number | null>(null);
+  const [activeMotor, setActiveMotor] = useState<"motor1" | "motor2" | null>(
+    null,
+  );
+  const [reversePulse, setReversePulse] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [fallbackMeterFlow, setFallbackMeterFlow] = useState<number>(
+    5 + Math.random() * 4,
+  );
   const engineRef = useRef(flowEngine);
+  const previousReversePulseRef = useRef(false);
+  const isMotor1On = activeMotor === "motor1";
+  const isMotor2On = activeMotor === "motor2";
+  const hasHouseFlowSignal = Number.isFinite(houseMeterFlow) && houseMeterFlow >= 0;
+  const isHouseLive = houseMeterStatus === "live" || hasHouseFlowSignal;
 
   useEffect(() => {
     const engine = engineRef.current;
@@ -85,47 +101,76 @@ export default function FlowSimulation({
   }, [mainFlow]);
 
   useEffect(() => {
-    let mounted = true;
+    if (!isMotor2On) {
+      setReversePulse(false);
+      return;
+    }
 
-    const fetchHouseMeter = async () => {
-      try {
-        const data = await getNodeTelemetry(["house_1"]);
-        const houseNode = data.find((node) => node.node_id === "house_1");
-        const value = houseNode?.flow_sensor ?? houseNode?.flow_rate ?? 0;
-        if (mounted) {
-          setHouseMeterValue(value);
-        }
-      } catch {
-        if (mounted) {
-          setHouseMeterValue((prev) => prev ?? 0);
-        }
-      }
-    };
+    setReversePulse(true);
+    const timer = window.setTimeout(() => {
+      setReversePulse(false);
+    }, 1500);
 
-    fetchHouseMeter();
-    const intervalId = window.setInterval(fetchHouseMeter, 3000);
+    return () => window.clearTimeout(timer);
+  }, [isMotor2On]);
 
-    return () => {
-      mounted = false;
-      window.clearInterval(intervalId);
-    };
-  }, []);
+  useEffect(() => {
+    if (!isMotor1On || !isHouseLive) return;
+    setToastMessage("Suspicious Flow - Chances of Motor usage");
+  }, [isMotor1On, isHouseLive]);
 
-  const isMotor1On = activeMotor === "motor1";
-  const isMotor2On = activeMotor === "motor2";
+  useEffect(() => {
+    if (
+      previousReversePulseRef.current &&
+      !reversePulse &&
+      isMotor2On &&
+      isHouseLive
+    ) {
+      setToastMessage("Suspicious Flow - Chances of Motor usage");
+    }
+    previousReversePulseRef.current = reversePulse;
+  }, [reversePulse, isMotor2On, isHouseLive]);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = window.setTimeout(() => setToastMessage(null), 2600);
+    return () => window.clearTimeout(timer);
+  }, [toastMessage]);
+
+  useEffect(() => {
+    if (hasHouseFlowSignal) return;
+
+    const intervalId = window.setInterval(() => {
+      setFallbackMeterFlow(5 + Math.random() * 4);
+    }, 2500);
+
+    return () => window.clearInterval(intervalId);
+  }, [hasHouseFlowSignal]);
+
+  const displayedHouseFlow = hasHouseFlowSignal ? houseMeterFlow : fallbackMeterFlow;
 
   const effectiveMainFlow = readings.main * (isMotor1On ? 1.35 : 1);
   const effectiveBranchAFlow = readings.branchA * (isMotor1On ? 1.45 : 1);
   const effectiveBranchBFlow = readings.branchB;
 
   const mainAnimationSpeed = Math.max(0.2, 2.5 - effectiveMainFlow / MAX_FLOW);
-  const branchAAnimationSpeed = Math.max(0.2, 2.5 - effectiveBranchAFlow / MAX_FLOW);
-  const branchBAnimationSpeed = Math.max(0.3, 2.5 - effectiveBranchBFlow / MAX_FLOW);
+  const branchAAnimationSpeed = Math.max(
+    0.2,
+    2.5 - effectiveBranchAFlow / MAX_FLOW,
+  );
+  const branchBAnimationSpeed = Math.max(
+    0.3,
+    2.5 - effectiveBranchBFlow / MAX_FLOW,
+  );
 
-  const expectedFlowLps = (effectiveMainFlow / 60).toFixed(2);
-  const actualFlowLps = (
-    (isMotor2On ? effectiveBranchBFlow : effectiveBranchAFlow) / 60
-  ).toFixed(2);
+  const expectedFlowLps = expectedFlow !== undefined 
+    ? (expectedFlow / 60).toFixed(2)
+    : (effectiveMainFlow / 60).toFixed(2);
+    
+  const actualFlowLps = hasHouseFlowSignal
+    ? (houseMeterFlow / 60).toFixed(2)
+    : ((isMotor2On ? effectiveBranchBFlow : effectiveBranchAFlow) / 60).toFixed(2);
+
   const backwardFlowDetected = effectiveBranchBFlow > 0;
 
   return (
@@ -144,7 +189,9 @@ export default function FlowSimulation({
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setActiveMotor((prev) => (prev === "motor1" ? null : "motor1"))}
+              onClick={() =>
+                setActiveMotor((prev) => (prev === "motor1" ? null : "motor1"))
+              }
               className={`px-3 py-1.5 rounded border text-xs font-condensed uppercase tracking-wider transition-colors ${
                 isMotor1On
                   ? "bg-pass text-paper border-pass"
@@ -155,7 +202,9 @@ export default function FlowSimulation({
               Motor1 {isMotor1On ? "ON" : "OFF"}
             </button>
             <button
-              onClick={() => setActiveMotor((prev) => (prev === "motor2" ? null : "motor2"))}
+              onClick={() =>
+                setActiveMotor((prev) => (prev === "motor2" ? null : "motor2"))
+              }
               className={`px-3 py-1.5 rounded border text-xs font-condensed uppercase tracking-wider transition-colors ${
                 isMotor2On
                   ? "bg-pass text-paper border-pass"
@@ -290,6 +339,28 @@ export default function FlowSimulation({
                 />
               </line>
             )}
+            {reversePulse && isMotor2On && (
+              <line
+                x1="700"
+                y1="150"
+                x2="500"
+                y2="150"
+                stroke="#60A5FA"
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray="40 30"
+                opacity={0.7}
+                style={{ transition: "opacity 0.3s ease" }}
+              >
+                <animate
+                  attributeName="stroke-dashoffset"
+                  from="-100"
+                  to="0"
+                  dur="0.6s"
+                  repeatCount="indefinite"
+                />
+              </line>
+            )}
             {isMotor1On && effectiveBranchAFlow > 0 && (
               <line
                 x1="300"
@@ -312,25 +383,51 @@ export default function FlowSimulation({
               </line>
             )}
             {isMotor2On && effectiveBranchBFlow > 0 && (
-              <line
-                x1="700"
-                y1="186"
-                x2="700"
-                y2="350"
-                stroke="#2563EB"
-                strokeWidth="12"
-                strokeLinecap="round"
-                strokeDasharray="60 40"
-                opacity="0.4"
-              >
-                <animate
-                  attributeName="stroke-dashoffset"
-                  from="0"
-                  to="-100"
-                  dur={`${branchBAnimationSpeed}s`}
-                  repeatCount="indefinite"
-                />
-              </line>
+              <>
+                {!reversePulse && (
+                  <line
+                    x1="700"
+                    y1="186"
+                    x2="700"
+                    y2="350"
+                    stroke="#2563EB"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    strokeDasharray="60 40"
+                    opacity="0.4"
+                  >
+                    <animate
+                      attributeName="stroke-dashoffset"
+                      from="0"
+                      to="-100"
+                      dur={`${branchBAnimationSpeed}s`}
+                      repeatCount="indefinite"
+                    />
+                  </line>
+                )}
+                {reversePulse && (
+                  <line
+                    x1="700"
+                    y1="250"
+                    x2="700"
+                    y2="186"
+                    stroke="#60A5FA"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    strokeDasharray="40 30"
+                    opacity={0.7}
+                    style={{ transition: "opacity 0.3s ease" }}
+                  >
+                    <animate
+                      attributeName="stroke-dashoffset"
+                      from="-80"
+                      to="0"
+                      dur="0.5s"
+                      repeatCount="indefinite"
+                    />
+                  </line>
+                )}
+              </>
             )}
 
             <g>
@@ -351,7 +448,7 @@ export default function FlowSimulation({
                 fontFamily="Space Mono, monospace"
                 fontWeight="700"
               >
-                {houseMeterValue?.toFixed(1) ?? "--.-"}
+                {displayedHouseFlow.toFixed(1)}
               </text>
               <text
                 x="500"
@@ -396,7 +493,7 @@ export default function FlowSimulation({
                   fontFamily="Barlow Condensed, sans-serif"
                   fontWeight="600"
                 >
-                  BRANCH A
+                  POST_METER
                 </text>
               )}
               {isMotor2On && (
@@ -409,7 +506,7 @@ export default function FlowSimulation({
                   fontFamily="Barlow Condensed, sans-serif"
                   fontWeight="600"
                 >
-                  BRANCH B
+                  PRE_METER
                 </text>
               )}
             </g>
@@ -496,8 +593,23 @@ export default function FlowSimulation({
         </div>
       </div>
 
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-[80] border border-signal bg-paper text-signal px-4 py-2 rounded shadow-lg">
+          <div className="font-condensed text-[10px] uppercase tracking-wider">
+            Error
+          </div>
+          <div className="font-mono text-[12px]">{toastMessage}</div>
+        </div>
+      )}
+
       <ExpandModal isOpen={isExpanded} onClose={() => setIsExpanded(false)}>
-        <FlowSimulation mainFlow={mainFlow} className="h-full p-6 flex-1" />
+        <FlowSimulation
+          mainFlow={mainFlow}
+          houseMeterFlow={houseMeterFlow}
+          houseMeterStatus={houseMeterStatus}
+          expectedFlow={expectedFlow}
+          className="h-full p-6 flex-1"
+        />
       </ExpandModal>
     </>
   );

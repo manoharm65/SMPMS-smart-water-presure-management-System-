@@ -120,17 +120,21 @@ export class TelemetryService {
       flowRate: dto.flowSensor,
     });
 
-    // Feed MPC Registry
-    mpcService.updateNodeState({
-      id: dto.nodeId,
-      pressure_bar: dto.pressure,
-      flow_lps: dto.flowSensor ? dto.flowSensor / 60 : 10, // Convert L/min to L/s if provided
-      valve_pct: dto.valvePosition || node.currentPosition || 50,
-      elevation_m: dto.nodeId === 'valve_1' ? 10 : dto.nodeId === 'valve_2' ? 45 : 20,
-      setpoint_bar: dto.nodeId === 'valve_1' ? 3.0 : dto.nodeId === 'valve_2' ? 2.5 : 2.8,
-      min_pressure_bar: 1.5,
-      max_pressure_bar: 5.5,
-    });
+    const isHouseNode = dto.nodeId.startsWith('house_');
+
+    // Feed MPC Registry only for valve nodes
+    if (!isHouseNode) {
+      mpcService.updateNodeState({
+        id: dto.nodeId,
+        pressure_bar: dto.pressure,
+        flow_lps: dto.flowSensor ? dto.flowSensor / 60 : 10,
+        valve_pct: dto.valvePosition || node.currentPosition || 50,
+        elevation_m: dto.nodeId === 'valve_1' ? 10 : dto.nodeId === 'valve_2' ? 45 : 20,
+        setpoint_bar: dto.nodeId === 'valve_1' ? 3.0 : dto.nodeId === 'valve_2' ? 2.5 : 2.8,
+        min_pressure_bar: 1.5,
+        max_pressure_bar: 5.5,
+      });
+    }
 
     // Update node last_seen and set status to online
     nodeRepository.updateStatusAndLastSeen(dto.nodeId, 'online', dto.timestamp);
@@ -144,6 +148,11 @@ export class TelemetryService {
       timestamp: new Date(dto.timestamp),
     };
     eventBus.emitTelemetryReceived(payload);
+
+    // Household flow-only nodes do not participate in valve command dispatch
+    if (isHouseNode) {
+      return { received: true, command: null };
+    }
 
     // Check for pending command to piggyback
     const pendingCommand = commandRepository.findOldestPendingByNodeId(dto.nodeId);

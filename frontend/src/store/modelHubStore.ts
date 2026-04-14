@@ -24,6 +24,7 @@ export type MpcNodeData = Record<string, NodeTelemetry>
 
 export type IwedsNodeData = {
   valve_1: NodeTelemetry | null
+  house_1: NodeTelemetry | null
   expected_flow_rate: number
   smart_meter: SmartMeterData | null
   motorized_flow: MotorizedFlowResult | null
@@ -152,6 +153,7 @@ export const useModelHubStore = create<ModelHubState>((set, get) => ({
   iwedsData: null,
   iwedsNodeData: {
     valve_1: null,
+    house_1: null,
     expected_flow_rate: 0,
     smart_meter: null,
     motorized_flow: null,
@@ -222,20 +224,25 @@ export const useModelHubStore = create<ModelHubState>((set, get) => ({
 
   fetchIwedsNodeData: async () => {
     try {
-      const [telemetry, meterData] = await Promise.all([
-        getNodeTelemetry(['valve_1']),
+      const [telemetryResult, meterResult] = await Promise.allSettled([
+        getNodeTelemetry(['valve_1', 'house_1']),
         getSmartMeterData(['meter_1']),
       ])
+      const telemetry = telemetryResult.status === 'fulfilled' ? telemetryResult.value : []
+      const meterData = meterResult.status === 'fulfilled' ? meterResult.value : []
       const valve1 = telemetry.find(t => t.node_id === 'valve_1') || null
+      const house1 = telemetry.find(t => t.node_id === 'house_1') || null
       const expectedFlowRate = valve1 ? calculateExpectedFlow(valve1.pressure) : 0
+      const hasAnyData = telemetryResult.status === 'fulfilled' || meterResult.status === 'fulfilled'
       set({
         iwedsNodeData: {
           valve_1: valve1,
+          house_1: house1,
           expected_flow_rate: expectedFlowRate,
           smart_meter: meterData.find(m => m.meter_id === 'meter_1') || null,
           motorized_flow: get().iwedsNodeData.motorized_flow,
         },
-        error: null,
+        error: hasAnyData ? null : 'Failed to refresh IWEDS telemetry',
       })
     } catch {
       set({
@@ -246,6 +253,15 @@ export const useModelHubStore = create<ModelHubState>((set, get) => ({
             flow_rate: 120,
             flow_sensor: 118,
             valve_position: 75,
+            status: 'live',
+            last_update: new Date().toISOString(),
+          },
+          house_1: {
+            node_id: 'house_1',
+            pressure: 2.2,
+            flow_rate: 7.5,
+            flow_sensor: 7.5,
+            valve_position: 0,
             status: 'live',
             last_update: new Date().toISOString(),
           },
@@ -349,7 +365,6 @@ export const useModelHubStore = create<ModelHubState>((set, get) => ({
   setMpcSimulation: (valve1, valve2) => set({ mpcSimulationValve1: valve1, mpcSimulationValve2: valve2 }),
 
   runMpcSimulation: async () => {
-    const { mpcSimulationValve1, mpcSimulationValve2 } = get()
     set({ runningScenario: true })
     
     // Show alert - MPC model is running (using browser alert for simulation)
@@ -370,7 +385,6 @@ export const useModelHubStore = create<ModelHubState>((set, get) => ({
   setLeakSimulation: (valve1, valve2) => set({ leakSimulationValve1: valve1, leakSimulationValve2: valve2 }),
 
   runLeakSimulation: async () => {
-    const { leakSimulationValve1, leakSimulationValve2 } = get()
     set({ runningScenario: true })
     
     // Wait 5 seconds then show alert

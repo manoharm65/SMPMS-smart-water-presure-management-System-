@@ -35,6 +35,7 @@ async function seed() {
     { nodeId: 'valve_4', name: 'DMA Zone 4 - West', location: 'Zone D', elevation: 15 },
     { nodeId: 'valve_5', name: 'DMA Zone 5 - Central', location: 'Zone E', elevation: 30 },
     { nodeId: 'valve_6', name: 'DMA Zone 6 - Industrial', location: 'Zone F', elevation: 5 },
+    { nodeId: 'house_1', name: 'Household Meter 1', location: 'Household A', elevation: 0 },
   ];
 
   const telemetryRepository = (await import('../repositories/telemetry.repository.js')).telemetryRepository;
@@ -49,9 +50,11 @@ async function seed() {
     }
     
     // Add recent telemetry readings for demo
-    const pressures = [3.2, 3.5, 2.8, 3.1, 2.9, 3.4];
-    const idx = parseInt(nodeData.nodeId.replace('valve_', '')) - 1;
-    const basePressure = pressures[idx % pressures.length];
+    const pressures = [3.2, 3.5, 2.8, 3.1, 2.9, 3.4, 2.2];
+    const valveIndex = nodeData.nodeId.startsWith('valve_')
+      ? parseInt(nodeData.nodeId.replace('valve_', ''), 10) - 1
+      : 6;
+    const basePressure = pressures[Math.max(0, valveIndex) % pressures.length];
     
     // Add 24 hours of telemetry data
     for (let h = 0; h < 24; h++) {
@@ -60,7 +63,7 @@ async function seed() {
       telemetryRepository.create({
         nodeId: nodeData.nodeId,
         pressure: Math.round(pressure * 100) / 100,
-        flowRate: 10 + Math.random() * 5,
+        flowRate: nodeData.nodeId.startsWith('house_') ? 6 + Math.random() * 3 : 10 + Math.random() * 5,
         temperature: 22 + Math.random() * 3,
         batteryLevel: 85 + Math.random() * 15,
         timestamp,

@@ -86,6 +86,29 @@ export function useModelHubPolling(intervalMs = 30000) {
   return { refresh: refreshAll }
 }
 
+export function useTelemetryPolling(intervalMs = 1000) {
+  const fetchIwedsNodeData = useModelHubStore((s) => s.fetchIwedsNodeData)
+  const activeTab = useModelHubStore((s) => s.activeTab)
+
+  const savedFetch = useRef(fetchIwedsNodeData)
+
+  useEffect(() => {
+    savedFetch.current = fetchIwedsNodeData
+  }, [fetchIwedsNodeData])
+
+  useEffect(() => {
+    if (activeTab !== 'iweds') return
+
+    const id = setInterval(() => {
+      savedFetch.current()
+    }, intervalMs)
+
+    return () => clearInterval(id)
+  }, [intervalMs, activeTab])
+
+  return { refresh: fetchIwedsNodeData }
+}
+
 export function useControlPolling(intervalMs = 15000) {
   const fetchControlState = useControlStore((s) => s.fetchControlState)
   const loading = useControlStore((s) => s.loading)
