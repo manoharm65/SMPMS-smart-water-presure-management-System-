@@ -45,6 +45,7 @@ export default function ModelHub() {
   } = useModelHubStore();
 
   const [showScenarioModal, setShowScenarioModal] = useState(false);
+  const [showSimulationModal, setShowSimulationModal] = useState(false);
 
   useModelHubPolling(30000);
   useTelemetryPolling(1000);
@@ -273,66 +274,6 @@ export default function ModelHub() {
           <ModelTab
             title={TAB_CONFIG.iweds.title}
             description={TAB_CONFIG.iweds.description}
-            stats={
-              <div className="grid grid-cols-2 gap-6 mb-4">
-                <div className="border-2 border-rule p-4 rounded bg-paper">
-                  <div className="font-condensed text-[12px] uppercase tracking-wider text-dim mb-3">
-                    Valve 1 - Pressure
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-[48px] text-ink">
-                      {iwedsNodeData.valve_1?.pressure.toFixed(1) ?? "-.-"}
-                    </span>
-                    <span className="font-condensed text-[14px] text-dim">
-                      BAR
-                    </span>
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <span
-                      className={`w-2 h-2 rounded-full ${iwedsNodeData.valve_1?.status === "live" ? "bg-pass" : "bg-signal"}`}
-                    />
-                    <span className="font-condensed text-[10px] text-dim">
-                      {iwedsNodeData.valve_1?.status === "live"
-                        ? "LIVE"
-                        : "OFFLINE"}
-                    </span>
-                  </div>
-                  {iwedsNodeData.valve_1?.flow_sensor !== undefined && (
-                    <div className="mt-3 pt-3 border-t border-rule">
-                      <div className="font-condensed text-[10px] uppercase tracking-wider text-dim">
-                        Flow Sensor
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="font-mono text-[24px] text-ink">
-                          {iwedsNodeData.valve_1.flow_sensor.toFixed(1)}
-                        </span>
-                        <span className="font-condensed text-[12px] text-dim">
-                          L/min
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="border-2 border-rule p-4 rounded bg-paper">
-                  <div className="font-condensed text-[12px] uppercase tracking-wider text-dim mb-3">
-                    Expected Flow (1/2" Pipe)
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-[48px] text-ink">
-                      {iwedsNodeData.expected_flow_rate}
-                    </span>
-                    <span className="font-condensed text-[14px] text-dim">
-                      L/min
-                    </span>
-                  </div>
-                  <div className="mt-2 font-condensed text-[10px] text-dim">
-                    Calculated at{" "}
-                    {iwedsNodeData.valve_1?.pressure.toFixed(1) ?? "-"} BAR
-                  </div>
-                </div>
-              </div>
-            }
             actions={
               <div className="flex items-center gap-2">
                 <button
@@ -351,6 +292,12 @@ export default function ModelHub() {
                     : "Motorized Flow"}
                 </button>
                 <button
+                  onClick={() => setShowSimulationModal(true)}
+                  className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors"
+                >
+                  Simulation
+                </button>
+                <button
                   onClick={() => setShowScenarioModal(true)}
                   disabled={runningScenario}
                   className="px-3 py-1.5 font-condensed text-[11px] uppercase tracking-wider border border-rule bg-paper text-ink hover:bg-ink hover:text-paper transition-colors disabled:opacity-50"
@@ -361,23 +308,69 @@ export default function ModelHub() {
             }
           >
             {/*<div className="p-4 h-full">*/}
-            <FlowSimulation
-              mainFlow={
-                iwedsNodeData.valve_1?.pressure
-                  ? iwedsNodeData.valve_1.pressure * 2
-                  : 100
-              }
-              houseMeterFlow={
-                iwedsNodeData.house_1?.flow_sensor ??
-                iwedsNodeData.house_1?.flow_rate ??
-                iwedsNodeData.smart_meter?.actual_flow ??
-                0
-              }
-              houseMeterStatus={iwedsNodeData.house_1?.status}
-              expectedFlow={iwedsNodeData.expected_flow_rate}
-              className="w-full"
-            />
-            {/*</div>*/}
+            <div className="grid grid-cols-2 gap-6 mb-4">
+              <div className="border-2 border-rule p-4 rounded bg-paper">
+                <div className="font-condensed text-[12px] uppercase tracking-wider text-dim mb-2">
+                  HOUSE_1
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="font-condensed text-[10px] uppercase tracking-wider text-dim">
+                      Flow
+                    </div>
+                    <div className="font-mono text-[32px] text-ink">
+                      {iwedsNodeData.house_1?.flow_rate?.toFixed(1) ?? "0.0"}
+                    </div>
+                    <div className="font-condensed text-[10px] text-dim">
+                      L/MIN
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-condensed text-[10px] uppercase tracking-wider text-dim">
+                      Status
+                    </div>
+                    <div
+                      className={`font-mono text-[14px] mt-2 ${
+                        iwedsNodeData.house_1?.status === "live"
+                          ? "text-pass"
+                          : "text-signal"
+                      }`}
+                    >
+                      {iwedsNodeData.house_1?.status?.toUpperCase() ?? "OFFLINE"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="border-2 border-rule p-4 rounded bg-paper">
+                <div className="font-condensed text-[12px] uppercase tracking-wider text-dim mb-2">
+                  VALVE_1
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="font-condensed text-[10px] uppercase tracking-wider text-dim">
+                      Pressure
+                    </div>
+                    <div className="font-mono text-[32px] text-ink">
+                      {iwedsNodeData.valve_1?.pressure?.toFixed(1) ?? "0.0"}
+                    </div>
+                    <div className="font-condensed text-[10px] text-dim">
+                      BAR
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-condensed text-[10px] uppercase tracking-wider text-dim">
+                      Derived Expected Flow
+                    </div>
+                    <div className="font-mono text-[32px] text-ink">
+                      {iwedsNodeData.expected_flow_rate?.toFixed(1) ?? "0.0"}
+                    </div>
+                    <div className="font-condensed text-[10px] text-dim">
+                      L/MIN
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </ModelTab>
         );
 
@@ -482,6 +475,42 @@ export default function ModelHub() {
             Error
           </div>
           <div className="font-mono text-[12px]">{error}</div>
+        </div>
+      )}
+
+      {showSimulationModal && (
+        <div className="fixed inset-0 bg-ink/80 flex items-center justify-center z-[100] p-4">
+          <div className="bg-paper border-2 border-rule rounded-lg shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-rule">
+              <h3 className="font-syne font-bold text-[18px] text-ink">
+                IWEDS Pipeline Simulation
+              </h3>
+              <button
+                onClick={() => setShowSimulationModal(false)}
+                className="text-dim hover:text-ink text-[24px] leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 p-4 overflow-hidden relative">
+              <FlowSimulation
+                mainFlow={
+                  iwedsNodeData.valve_1?.pressure
+                    ? iwedsNodeData.valve_1.pressure * 2
+                    : 100
+                }
+                houseMeterFlow={
+                  iwedsNodeData.house_1?.flow_sensor ??
+                  iwedsNodeData.house_1?.flow_rate ??
+                  iwedsNodeData.smart_meter?.actual_flow ??
+                  0
+                }
+                houseMeterStatus={iwedsNodeData.house_1?.status}
+                expectedFlow={iwedsNodeData.expected_flow_rate}
+                className="w-full h-full border-none shadow-none"
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

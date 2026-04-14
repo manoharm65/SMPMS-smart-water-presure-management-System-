@@ -171,36 +171,6 @@ function getDMAColor(zone: DmaZoneLevel) {
   }
 }
 
-function getFlowDirection(zone: DmaZoneLevel) {
-  switch (zone) {
-    case "High":
-      return "Downhill ↓ (Source Zone)";
-    case "Medium-High":
-      return "Receives & Distributes ↕";
-    case "Medium":
-      return "Receives & Distributes ↕";
-    case "Low":
-      return "Terminal Zone ✓ (End Point)";
-    default:
-      return "Receives & Distributes ↕";
-  }
-}
-
-function getZoneEmoji(zone: DmaZoneLevel) {
-  switch (zone) {
-    case "High":
-      return "🔴";
-    case "Medium-High":
-      return "🟠";
-    case "Medium":
-      return "🟡";
-    case "Low":
-      return "🟢";
-    default:
-      return "🟠";
-  }
-}
-
 function parseDiameterMm(props?: Record<string, unknown>) {
   if (!props) return undefined;
   const v =
@@ -489,16 +459,16 @@ export default function PipelineMap({
   const telemetryByZone = useDashboardStore((s) => s.zones);
   const mapDataStatus = useDashboardStore((s) => s.mapDataStatus);
   const mapMode = useDashboardStore((s) => s.mapMode);
-  const setMapMode = useDashboardStore((s) => s.setMapMode);
   const selectedDmaId = useDashboardStore((s) => s.selectedDmaId);
   const selectDma = useDashboardStore((s) => s.selectDma);
   const selectedValveId = useDashboardStore((s) => s.selectedValveId);
   const selectedPipelineId = useDashboardStore((s) => s.selectedPipelineId);
+  const selectedHardwareDmaId = useDashboardStore(
+    (s) => s.selectedHardwareDmaId,
+  );
   const [hoveredPipelineId, setHoveredPipelineId] = useState<string | null>(
     null,
   );
-  const [selectedHardwareDmaId, setSelectedHardwareDmaId] =
-    useState<string>("DMA-01");
 
   const pipelineRendering = useMemo(() => {
     const count = pipelines.length;

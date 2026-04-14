@@ -1,5 +1,5 @@
-import type { LatLngTuple } from 'leaflet'
-import { CircleMarker, Polygon, Polyline, Popup, Tooltip } from 'react-leaflet'
+import { type LatLngTuple, divIcon } from 'leaflet'
+import { CircleMarker, Polygon, Polyline, Popup, Tooltip, Marker } from 'react-leaflet'
 
 export type ValveNodeProps = {
   id: string
@@ -166,6 +166,7 @@ export default function ValveNode({
   const isUjaniSource = id === SOURCE_SHAPE_IDS.ujani
   const isTakaliSource = id === SOURCE_SHAPE_IDS.takali
   const isSpecialSource = isUjaniSource || isTakaliSource
+  const isPoppingValve = id === 'SMC-SMC_BORE_7-239' || id === 'SMC-SMC_BORE_7-15'
   const shapePositions = isUjaniSource ? squareAround(position) : diamondAround(position)
   const sourceSupportPoints = supportPointsAround(position)
 
@@ -275,6 +276,35 @@ export default function ValveNode({
           {nodeContent}
         </Polygon>
       </>
+    )
+  }
+
+  if (isPoppingValve) {
+    const poppingIcon = divIcon({
+      className: '',
+      html: `
+        <div class="relative flex h-4 w-4 -ml-2 -mt-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" style="animation-duration: 2s;"></span>
+          <span class="relative inline-flex rounded-full h-4 w-4 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></span>
+        </div>
+      `,
+      iconSize: [0, 0],
+    })
+
+    return (
+      <Marker
+        position={position}
+        icon={poppingIcon}
+        eventHandlers={
+          interactive
+            ? {
+                click: () => onSelect(id),
+              }
+            : undefined
+        }
+      >
+        {nodeContent}
+      </Marker>
     )
   }
 

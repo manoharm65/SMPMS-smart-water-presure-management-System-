@@ -1,27 +1,6 @@
 import { useMemo } from 'react'
 import { useDashboardStore } from '../../store/dashboardStore'
 
-function ZoomButtons({ onZoomIn, onZoomOut }: { onZoomIn?: () => void; onZoomOut?: () => void }) {
-  return (
-    <div className="flex gap-1">
-      <button
-        type="button"
-        className="rounded border border-border bg-bg px-2 py-1 text-xs text-text hover:bg-bg/70"
-        onClick={onZoomIn}
-      >
-        +
-      </button>
-      <button
-        type="button"
-        className="rounded border border-border bg-bg px-2 py-1 text-xs text-text hover:bg-bg/70"
-        onClick={onZoomOut}
-      >
-        -
-      </button>
-    </div>
-  )
-}
-
 const DMA_ZONES = [
   { id: 'DMA-01', elevation: 520, zone: 'Low' as const, feedsInto: ['DMA-04', 'DMA-05'] },
   { id: 'DMA-02', elevation: 510, zone: 'Low' as const, feedsInto: ['DMA-05', 'DMA-06'] },
@@ -124,6 +103,13 @@ export default function ZoneInspector() {
   const pipelines = useDashboardStore((s) => s.pipelines)
   const zones = useDashboardStore((s) => s.zones)
   const zonesGeo = useDashboardStore((s) => s.zonesGeo)
+
+  const hardwareModeClass = hardwareModeEnabled ? 'text-accent' : 'text-text-muted'
+  const hardwarePanelClass = hardwareModeEnabled ? 'border-accent/30 bg-accent/5' : 'border-border/50 bg-bg/30'
+  const activeDmaClass = hardwareModeEnabled ? 'text-text' : 'text-text-muted'
+  const activeDmaDotClass = hardwareModeEnabled ? 'bg-accent' : 'bg-border'
+  const socketClass = connection.status === 'connected' ? 'text-accent' : 'text-critical'
+  const socketDotClass = connection.status === 'connected' ? 'bg-accent' : 'bg-critical'
 
   const activeDma = useMemo(
     () => DMA_ZONES.find((d) => d.id === selectedHardwareDmaId) ?? DMA_ZONES[0],
