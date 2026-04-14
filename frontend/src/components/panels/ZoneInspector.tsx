@@ -96,6 +96,25 @@ export default function ZoneInspector() {
     return pairs
   }, [data])
 
+  const hardwareModeClass = hardwareModeEnabled ? 'text-accent' : 'text-critical'
+  const hardwarePanelClass = hardwareModeEnabled
+    ? 'border-[rgba(0,200,150,0.35)] bg-[rgba(0,200,150,0.08)]'
+    : 'border-[rgba(240,77,77,0.35)] bg-[rgba(240,77,77,0.08)]'
+  const activeDmaClass = activeHardwareDmaId ? 'text-text' : 'text-warning'
+  const activeDmaDotClass = activeHardwareDmaId ? 'bg-accent' : 'bg-warning'
+  const socketClass =
+    connection.status === 'connected'
+      ? 'text-accent'
+      : connection.status === 'connecting'
+        ? 'text-warning'
+        : 'text-critical'
+  const socketDotClass =
+    connection.status === 'connected'
+      ? 'bg-accent'
+      : connection.status === 'connecting'
+        ? 'bg-warning'
+        : 'bg-critical'
+
   return (
     <aside className="flex w-[360px] flex-col border-l border-border bg-panel">
       <div className="border-b border-border px-3 py-2">
@@ -155,18 +174,21 @@ export default function ZoneInspector() {
               value={dmaTelemetry ? `${dmaTelemetry.flowRate.toFixed(1)} L/s` : '--'}
             />
 
-            <div className="mt-3 rounded border border-border bg-bg px-2 py-2">
+            <div className={`mt-3 rounded border px-2 py-2 ${hardwarePanelClass}`}>
               <div className="text-[11px] uppercase tracking-wider text-text-faint">
                 Hardware Mode
               </div>
-              <div className="mt-1 text-xs text-text-muted">
-                Mode: {hardwareModeEnabled ? 'ON' : 'OFF'}
+              <div className={`mt-1 flex items-center gap-2 text-xs font-semibold ${hardwareModeClass}`}>
+                <span className={`h-2 w-2 rounded-full ${hardwareModeEnabled ? 'bg-accent' : 'bg-critical'}`} />
+                <span>Mode: {hardwareModeEnabled ? 'ON' : 'OFF'}</span>
               </div>
-              <div className="mt-1 text-xs text-text-muted">
-                Active DMA: {activeHardwareDmaId ?? '--'}
+              <div className={`mt-1 flex items-center gap-2 text-xs ${activeDmaClass}`}>
+                <span className={`h-2 w-2 rounded-full ${activeDmaDotClass}`} />
+                <span>Active DMA: {activeHardwareDmaId ?? '--'}</span>
               </div>
-              <div className="mt-1 text-xs text-text-muted">
-                Socket: {connection.status.toUpperCase()}
+              <div className={`mt-1 flex items-center gap-2 text-xs font-semibold ${socketClass}`}>
+                <span className={`h-2 w-2 rounded-full ${socketDotClass}`} />
+                <span>Socket: {connection.status.toUpperCase()}</span>
               </div>
             </div>
           </>

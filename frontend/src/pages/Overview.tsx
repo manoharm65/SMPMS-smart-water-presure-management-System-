@@ -31,14 +31,54 @@ function normalizeZoneId(zoneId: string) {
 export default function Overview() {
   const chartRef = useRef<HTMLCanvasElement>(null)
   const chartInstanceRef = useRef<Chart | null>(null)
+  const hasShownHardwarePopupRef = useRef(false)
   const [zones, setZones] = useState<Zone[]>([])
   const [kpi, setKpi] = useState<KPI | null>(null)
   const [pressureHistory, setPressureHistory] = useState<PressureHistory | null>(null)
   const [selectedDma, setSelectedDma] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-const [chartLoading, setChartLoading] = useState(false)
+  const [chartLoading, setChartLoading] = useState(false)
   const [mpcStatus, setMpcStatus] = useState<MpcStatus | null>(null)
+  const [showHardwareDisconnectedPopup, setShowHardwareDisconnectedPopup] = useState(false)
+
+  const hardwareConnected = useMemo(() => {
+    if (!mpcStatus) return true
+
+    const statusAny = mpcStatus as MpcStatus & {
+      running?: boolean
+      active_nodes?: number
+      total_nodes?: number
+      enabled?: boolean
+      status?: string
+    }
+
+    if (typeof statusAny.active_nodes === 'number') {
+      return statusAny.active_nodes > 0
+    }
+
+    if (typeof statusAny.isRunning === 'boolean') {
+      return statusAny.isRunning
+    }
+
+    if (typeof statusAny.running === 'boolean') {
+      return statusAny.running
+    }
+
+    const statusText = String(statusAny.status ?? '').toLowerCase()
+    if (statusText.includes('offline') || statusText.includes('disconnected')) {
+      return false
+    }
+    if (statusText.includes('connected') || statusText.includes('running') || statusText.includes('active')) {
+      return true
+    }
+
+    if (typeof statusAny.total_nodes === 'number') {
+      return statusAny.total_nodes > 0
+    }
+
+    return true
+  }, [mpcStatus])
 
   const hardwareDma = useMemo(() => {
     const exact = zones.find((z) => normalizeZoneId(z.id) === 'DMA08')
@@ -128,6 +168,14 @@ const [chartLoading, setChartLoading] = useState(false)
   }, [selectedDma, fetchPressureHistory])
 
   useEffect(() => {
+    if (loading || !mpcStatus || hasShownHardwarePopupRef.current) return
+    if (!hardwareConnected) {
+      setShowHardwareDisconnectedPopup(true)
+      hasShownHardwarePopupRef.current = true
+    }
+  }, [hardwareConnected, loading, mpcStatus])
+
+  useEffect(() => {
     if (!chartRef.current || !pressureHistory) return
 
     if (chartInstanceRef.current) {
@@ -215,6 +263,32 @@ const [chartLoading, setChartLoading] = useState(false)
 
   return (
     <div className="bg-paper min-h-screen">
+      {showHardwareDisconnectedPopup && (
+        <div className="alert-overlay-enter fixed inset-0 z-50 flex items-start justify-center bg-[radial-gradient(circle_at_top,rgba(232,0,29,0.24),rgba(10,10,10,0.72))] px-4 pt-24">
+          <div className="alert-popup-enter relative w-full max-w-md overflow-hidden rounded border-2 border-[#E8001D] bg-[linear-gradient(160deg,#FFF4F4_0%,#FFE7E8_52%,#FFECEC_100%)] p-4 shadow-2xl">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[#E8001D]" />
+            <div className="font-condensed text-[10px] uppercase tracking-wider text-[#E8001D]">
+              DMA-08 Hardware
+            </div>
+            <h2 className="mt-1 font-syne text-[22px] font-bold leading-tight text-ink">
+              Hardware is not connected
+            </h2>
+            <p className="mt-2 font-condensed text-[12px] text-dim">
+              Live hardware data is unavailable right now. Pressure logic and dashboard simulation can continue in fallback mode.
+            </p>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowHardwareDisconnectedPopup(false)}
+                className="border border-ink px-3 py-1 font-condensed text-[11px] uppercase tracking-wider text-ink hover:bg-ink hover:text-paper"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Masthead Strip */}
       <div className="border-b-2 border-rule px-5 py-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
