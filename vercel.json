@@ -6,10 +6,6 @@
       "root": "backend",
       "framework": "express"
     },
-    "ml": {
-      "root": "backend/ml",
-      "runtime": "python"
-    },
     "frontend": {
       "root": "frontend",
       "framework": "vite"
