@@ -108,6 +108,18 @@ export type MlSimulationScenario =
   | 'old_pipe_degradation_signature'
   | 'all'
 
+export interface MlSimulationInput {
+  pressure?: number
+  flowRate?: number
+  valvePosition?: number
+  supplyOn?: boolean
+  constructionActivity?: boolean
+  pipeAgeYears?: number
+  previousValvePosition?: number
+  pressureLag2?: number
+  hydraulicGradeAngleDeg?: number
+}
+
 export interface MlSimulationResult {
   scenario: string
   pressure: number
@@ -115,6 +127,9 @@ export interface MlSimulationResult {
   supply_on: number
   control_action: number
   unexplained_pressure_drop: number
+  prev_valve_position: number
+  pressure_lag_2: number
+  hydraulic_grade_angle_deg: number
   anomaly_flag: number
   anomaly_score: number
   anomaly_threshold: number
@@ -124,12 +139,27 @@ export interface MlSimulationResult {
   top3_probable_problems: string
 }
 
+export interface MlSimulationMilestoneInfo {
+  totalPredictions: number
+  milestoneHit: boolean
+  milestoneEvery: number
+  milestoneValue?: number
+  webAlertMessage?: string
+}
+
+export interface MlSimulationResponse {
+  scenario: MlSimulationScenario
+  count: number
+  results: MlSimulationResult[]
+  milestone?: MlSimulationMilestoneInfo
+}
+
 export interface MpcStatus {
-  lastRun: string | null;
-  isRunning: boolean;
-  status: string;
-  logs?: string[];
-  last_cycle?: any;
+  lastRun: string | null
+  isRunning: boolean
+  status: string
+  logs?: string[]
+  last_cycle?: any
 }
 
 // =============================================================================
@@ -142,12 +172,6 @@ export async function getMpcStatus(cfg?: ApiConfig): Promise<MpcStatus> {
 
 export async function runMpcNow(cfg?: ApiConfig): Promise<any> {
   return apiPost<any>('/api/v1/mpc/run', {}, cfg)
-}
-
-export interface MlSimulationResponse {
-  scenario: MlSimulationScenario
-  count: number
-  results: MlSimulationResult[]
 }
 
 const defaultBaseUrl = (import.meta as any).env?.VITE_API_BASE_URL as
@@ -266,9 +290,31 @@ export async function getMlSimulationScenarios(
 
 export async function simulateMlCondition(
   scenario: MlSimulationScenario,
+  input: MlSimulationInput,
   cfg?: ApiConfig
 ): Promise<MlSimulationResponse> {
-  return apiPost<MlSimulationResponse>(`${BASE_URL}/ml/simulate`, { scenario }, cfg)
+  return apiPost<MlSimulationResponse>(
+    `${BASE_URL}/ml/simulate`,
+    { scenario, input },
+    cfg
+  )
+}
+
+export interface ManualAlertInput {
+  nodeId: string
+  riskLevel: string
+  message: string
+}
+
+export interface ManualAlertResponse {
+  success: boolean
+}
+
+export async function triggerManualAlert(
+  input: ManualAlertInput,
+  cfg?: ApiConfig
+): Promise<ManualAlertResponse> {
+  return apiPost<ManualAlertResponse>('/api/v1/alerts/trigger', input, cfg)
 }
 
 export async function setValvePosition(
